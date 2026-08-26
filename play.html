@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Graj - My Games</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<script>
+(function () {
+  var mode = localStorage.getItem('themeMode') || 'auto';
+  if (mode !== 'auto') document.documentElement.setAttribute('data-theme', mode);
+})();
+</script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="logo" href="index.html">🎮 MY GAMES</a>
+    <nav class="site-nav">
+      <a href="index.html">Główne</a>
+      <a href="settings.html">Ustawienia</a>
+    </nav>
+    <a href="add-game.html" class="btn btn--accent">+ Dodaj grę</a>
+    <div class="account-widget" id="account-widget"></div>
+  </header>
+
+  <main class="play-page" id="play-page"></main>
+
+  <footer class="site-footer">
+    <p>Zrobione z ❤️ i hostowane na GitHub Pages</p>
+  </footer>
+
+  <script src="auth.js"></script>
+  <script src="theme.js"></script>
+  <script src="games.js"></script>
+  <script>
+    var page = document.getElementById('play-page');
+    var params = new URLSearchParams(window.location.search);
+    var game = getGameById(params.get('id'));
+
+    if (!game) {
+      page.innerHTML =
+        '<div class="form-card">' +
+        '<h1>Nie znaleziono gry</h1>' +
+        '<p class="settings-hint">Ta gra nie istnieje albo została usunięta.</p>' +
+        '<a class="btn btn--accent" href="index.html">Wróć do listy gier</a>' +
+        '</div>';
+    } else {
+      var titleEl = document.createElement('h1');
+      titleEl.textContent = game.title;
+
+      var metaEl = document.createElement('p');
+      metaEl.className = 'play-meta';
+      metaEl.textContent = 'Autor na Scratchu: ' + game.scratchAuthor + ' · Dodane przez: ' + game.addedBy;
+
+      var frameWrap = document.createElement('div');
+      frameWrap.className = 'scratch-embed';
+
+      var iframe = document.createElement('iframe');
+      iframe.src = 'https://scratch.mit.edu/projects/' + encodeURIComponent(game.scratchProjectId) + '/embed';
+      iframe.allowFullscreen = true;
+      frameWrap.appendChild(iframe);
+
+      var backLink = document.createElement('a');
+      backLink.className = 'btn btn--ghost play-back';
+      backLink.href = 'index.html';
+      backLink.textContent = '← Wróć do listy gier';
+
+      page.append(titleEl, metaEl, frameWrap, backLink);
+    }
+  </script>
+</body>
+</html>

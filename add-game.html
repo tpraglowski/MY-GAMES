@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dodaj grę - My Games</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<script>
+(function () {
+  var mode = localStorage.getItem('themeMode') || 'auto';
+  if (mode !== 'auto') document.documentElement.setAttribute('data-theme', mode);
+})();
+</script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="logo" href="index.html">🎮 MY GAMES</a>
+    <nav class="site-nav">
+      <a href="index.html">Główne</a>
+      <a href="settings.html">Ustawienia</a>
+    </nav>
+    <a href="add-game.html" class="btn btn--accent">+ Dodaj grę</a>
+    <div class="account-widget" id="account-widget"></div>
+  </header>
+
+  <main class="form-page">
+    <div class="form-card" id="add-game-card">
+      <h1>Dodaj grę</h1>
+      <p class="settings-hint">Wklej link do swojego projektu na Scratchu, żeby dodać go do listy gier.</p>
+
+      <form id="add-game-form" class="auth-form">
+        <label>Tytuł gry
+          <input type="text" name="title" required>
+        </label>
+        <label>Link do gry na Scratchu
+          <input type="url" name="scratchUrl" placeholder="https://scratch.mit.edu/projects/123456789/" required>
+        </label>
+        <label>Nazwa użytkownika Scratch autora gry
+          <input type="text" name="scratchAuthor" required>
+        </label>
+        <button type="submit" class="btn btn--accent">Dodaj grę</button>
+      </form>
+
+      <p class="auth-error" id="add-game-error" hidden></p>
+
+      <div id="login-required" hidden>
+        <p class="settings-hint">Musisz się zalogować, żeby dodać grę.</p>
+        <a class="btn btn--accent" href="login.html">Zaloguj się</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>Zrobione z ❤️ i hostowane na GitHub Pages</p>
+  </footer>
+
+  <script src="auth.js"></script>
+  <script src="theme.js"></script>
+  <script src="games.js"></script>
+  <script>
+    var form = document.getElementById('add-game-form');
+    var errorEl = document.getElementById('add-game-error');
+    var loginRequired = document.getElementById('login-required');
+
+    if (!getCurrentUser()) {
+      form.hidden = true;
+      loginRequired.hidden = false;
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var data = new FormData(form);
+      try {
+        var game = addGame({
+          title: data.get('title'),
+          scratchUrl: data.get('scratchUrl'),
+          scratchAuthor: data.get('scratchAuthor'),
+        });
+        window.location.href = 'play.html?id=' + encodeURIComponent(game.id);
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.hidden = false;
+      }
+    });
+  </script>
+</body>
+</html>
