@@ -1,10 +1,13 @@
-document.addEventListener('DOMContentLoaded', function () {
+import { getGames } from './games.js';
+import './auth.js';
+
+document.addEventListener('DOMContentLoaded', async function () {
   const grid = document.getElementById('game-grid');
   if (!grid) return;
 
   const searchInput = document.getElementById('game-search');
   const noResults = document.getElementById('no-results');
-  const allGames = getGames();
+  const allGames = await getGames();
 
   function renderGames(games) {
     grid.innerHTML = '';

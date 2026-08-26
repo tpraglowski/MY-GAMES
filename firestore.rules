@@ -1,0 +1,48 @@
+// My Games — Firestore Security Rules
+//
+// Not wired to any deploy step (no Firebase CLI project configured here) —
+// publishing this means pasting it into Firebase console → Firestore → Rules → Publish.
+//
+// Every visitor signs in anonymously (signInAnonymously in auth.js) before doing
+// anything, so request.auth is never null once the page has loaded. Accounts are our
+// own system (Firestore documents in "accounts", not Firebase Auth users), so these
+// rules use the uidAccount reverse-lookup pattern (see auth.js's rememberAuthUid) to
+// tie a request's anonymous auth UID to the account it actually logged into.
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function myAccountId() {
+      return get(/databases/$(database)/documents/uidAccount/$(request.auth.uid)).data.accountId;
+    }
+    function isMe(accountId) {
+      return isSignedIn() && exists(/databases/$(database)/documents/uidAccount/$(request.auth.uid)) && myAccountId() == accountId;
+    }
+
+    match /uidAccount/{uid} {
+      // Only the owning device writes its own reverse-lookup entry; nobody needs to
+      // read this collection directly (rules read it internally via get()).
+      allow read: if false;
+      allow write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    match /accounts/{accountId} {
+      allow read: if isSignedIn();
+      // Registration: anyone signed in (anonymously) may create their own account doc.
+      allow create: if isSignedIn();
+      allow update, delete: if isMe(accountId);
+    }
+
+    match /games/{gameId} {
+      allow read: if isSignedIn();
+      // A game can only be created with addedBy set to the account actually making
+      // the request — the app can't spoof "posted by someone else" server-side.
+      allow create: if isSignedIn() && request.resource.data.addedBy == myAccountId();
+      allow update, delete: if isMe(resource.data.addedBy);
+    }
+  }
+}

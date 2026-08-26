@@ -1,19 +1,28 @@
-const GAMES_KEY = 'mg_games';
+import { db, authReady, getCurrentUser } from './auth.js';
+import { collection, doc, addDoc, getDoc, getDocs, query, orderBy } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 
-function getGames() {
-  return JSON.parse(localStorage.getItem(GAMES_KEY) || '[]');
-}
+const gamesCollection = collection(db, 'games');
 
-function saveGames(games) {
-  localStorage.setItem(GAMES_KEY, JSON.stringify(games));
-}
-
-function extractScratchProjectId(url) {
+export function extractScratchProjectId(url) {
   const match = url.match(/scratch\.mit\.edu\/projects\/(\d+)/i);
   return match ? match[1] : null;
 }
 
-function addGame({ title, scratchUrl, scratchAuthor }) {
+export async function getGames() {
+  await authReady;
+  const snap = await getDocs(query(gamesCollection, orderBy('addedAt', 'desc')));
+  return snap.docs.map(function (d) {
+    return Object.assign({ id: d.id }, d.data());
+  });
+}
+
+export async function getGameById(id) {
+  await authReady;
+  const snap = await getDoc(doc(db, 'games', id));
+  return snap.exists() ? Object.assign({ id: snap.id }, snap.data()) : null;
+}
+
+export async function addGame({ title, scratchUrl, scratchAuthor }) {
   if (!title || !scratchUrl || !scratchAuthor) {
     throw new Error('Uzupełnij wszystkie pola.');
   }
@@ -25,21 +34,14 @@ function addGame({ title, scratchUrl, scratchAuthor }) {
   if (!currentUser) {
     throw new Error('Musisz być zalogowany, żeby dodać grę.');
   }
-
-  const games = getGames();
+  await authReady;
   const game = {
-    id: 'g_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
     title: title.trim(),
     scratchProjectId: projectId,
     scratchAuthor: scratchAuthor.trim(),
     addedBy: currentUser,
     addedAt: new Date().toISOString(),
   };
-  games.push(game);
-  saveGames(games);
-  return game;
-}
-
-function getGameById(id) {
-  return getGames().find((g) => g.id === id);
+  const docRef = await addDoc(gamesCollection, game);
+  return Object.assign({ id: docRef.id }, game);
 }
