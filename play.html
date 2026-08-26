@@ -16,11 +16,12 @@
 <body>
   <header class="site-header">
     <a class="logo" href="index.html">🎮 MY GAMES</a>
-    <nav class="site-nav">
-      <a href="index.html">Główne</a>
-      <a href="settings.html">Ustawienia</a>
+    <nav class="site-nav" id="site-nav">
+      <span class="nav-indicator" id="nav-indicator"></span>
+      <a href="index.html" data-nav="index">Główne</a>
+      <a href="settings.html" data-nav="settings">Ustawienia</a>
+      <a href="add-game.html" data-nav="add-game">+ Dodaj grę</a>
     </nav>
-    <a href="add-game.html" class="btn btn--accent">+ Dodaj grę</a>
     <div class="account-widget" id="account-widget"></div>
   </header>
 
@@ -32,6 +33,7 @@
 
   <script src="auth.js"></script>
   <script src="theme.js"></script>
+  <script src="nav.js"></script>
   <script src="games.js"></script>
   <script>
     var page = document.getElementById('play-page');
