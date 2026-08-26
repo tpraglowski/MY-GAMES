@@ -8,6 +8,11 @@
 // own system (Firestore documents in "accounts", not Firebase Auth users), so these
 // rules use the uidAccount reverse-lookup pattern (see auth.js's rememberAuthUid) to
 // tie a request's anonymous auth UID to the account it actually logged into.
+//
+// "tpraglowski" is hardcoded as a bootstrap admin (mirrored in auth.js) so the very
+// first admin doesn't need another admin to grant it. Every other admin must be
+// promoted by an existing admin via the admin panel (admin.html), which flips the
+// `admin` field on that account's document.
 
 rules_version = '2';
 service cloud.firestore {
@@ -22,6 +27,13 @@ service cloud.firestore {
     function isMe(accountId) {
       return isSignedIn() && exists(/databases/$(database)/documents/uidAccount/$(request.auth.uid)) && myAccountId() == accountId;
     }
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/uidAccount/$(request.auth.uid)) &&
+        (myAccountId() == 'tpraglowski' || get(/databases/$(database)/documents/accounts/$(myAccountId())).data.admin == true);
+    }
+    function changedFields() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
 
     match /uidAccount/{uid} {
       // Only the owning device writes its own reverse-lookup entry; nobody needs to
@@ -32,9 +44,14 @@ service cloud.firestore {
 
     match /accounts/{accountId} {
       allow read: if isSignedIn();
-      // Registration: anyone signed in (anonymously) may create their own account doc.
-      allow create: if isSignedIn();
-      allow update, delete: if isMe(accountId);
+      // Registration: anyone signed in (anonymously) may create their own account,
+      // but cannot hand themselves admin on the way in.
+      allow create: if isSignedIn() && request.resource.data.admin != true;
+      // Update: either it's your own account or you're an admin — and only an admin
+      // may change the `admin` field itself.
+      allow update: if isSignedIn() && (isMe(accountId) || isAdmin())
+        && (isAdmin() || !changedFields().hasAny(['admin']));
+      allow delete: if isAdmin();
     }
 
     match /games/{gameId} {
@@ -42,7 +59,9 @@ service cloud.firestore {
       // A game can only be created with addedBy set to the account actually making
       // the request — the app can't spoof "posted by someone else" server-side.
       allow create: if isSignedIn() && request.resource.data.addedBy == myAccountId();
-      allow update, delete: if isMe(resource.data.addedBy);
+      // The uploader can delete/edit their own game; an admin can delete any game.
+      allow update: if isMe(resource.data.addedBy);
+      allow delete: if isMe(resource.data.addedBy) || isAdmin();
     }
   }
 }

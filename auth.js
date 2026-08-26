@@ -1,7 +1,7 @@
 import { firebaseConfig } from './firebase-config.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 
 // Accounts are our own system, stored as Firestore documents (id = normalized
 // username) — not Firebase Auth users. Every visitor also signs in anonymously so
@@ -16,6 +16,10 @@ export const authReady = signInAnonymously(auth).catch(function (err) {
 });
 
 const SESSION_KEY = 'mg_session';
+// Bootstrap admin: always treated as admin regardless of its Firestore doc, so the
+// very first admin account doesn't need anyone with existing admin rights to grant
+// it (see firestore.rules — the same username is hardcoded there for consistency).
+const HARDCODED_ADMIN = 'tpraglowski';
 const normalise = (name) => name.trim().toLowerCase();
 const accountDocRef = (name) => doc(db, 'accounts', normalise(name));
 
@@ -54,6 +58,33 @@ function setSession(username) {
 
 export function logoutUser() {
   localStorage.removeItem(SESSION_KEY);
+}
+
+export async function isCurrentUserAdmin() {
+  const current = getCurrentUser();
+  if (!current) return false;
+  if (normalise(current) === HARDCODED_ADMIN) return true;
+  await authReady;
+  const snap = await getDoc(accountDocRef(current));
+  return snap.exists() && snap.data().admin === true;
+}
+
+export async function getAllAccounts() {
+  await authReady;
+  const snap = await getDocs(collection(db, 'accounts'));
+  return snap.docs.map(function (d) {
+    return Object.assign({ id: d.id }, d.data());
+  });
+}
+
+export async function setAccountAdmin(accountId, isAdmin) {
+  await authReady;
+  await updateDoc(doc(db, 'accounts', accountId), { admin: isAdmin });
+}
+
+export async function deleteAccount(accountId) {
+  await authReady;
+  await deleteDoc(doc(db, 'accounts', accountId));
 }
 
 export async function registerUser(username, password) {
@@ -102,7 +133,8 @@ export function renderAccountWidget() {
   if (current) {
     const name = document.createElement('span');
     name.className = 'account-widget__name';
-    name.textContent = '👤 ' + current;
+    name.innerHTML = '<svg class="icon" viewBox="0 0 20 20"><circle cx="10" cy="6.5" r="3.2"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg> ';
+    name.append(current);
 
     const logoutBtn = document.createElement('button');
     logoutBtn.type = 'button';
@@ -110,7 +142,7 @@ export function renderAccountWidget() {
     logoutBtn.textContent = 'Wyloguj';
     logoutBtn.addEventListener('click', function () {
       logoutUser();
-      renderAccountWidget();
+      refreshHeader();
     });
 
     widget.append(name, logoutBtn);
@@ -123,4 +155,26 @@ export function renderAccountWidget() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', renderAccountWidget);
+export async function refreshHeader() {
+  renderAccountWidget();
+
+  const nav = document.getElementById('site-nav');
+  if (!nav) return;
+  const existingAdminLink = nav.querySelector('[data-nav="admin"]');
+  const admin = await isCurrentUserAdmin();
+
+  if (admin && !existingAdminLink) {
+    const link = document.createElement('a');
+    link.href = 'admin.html';
+    link.dataset.nav = 'admin';
+    link.innerHTML = '<svg class="icon" viewBox="0 0 20 20"><path d="M10 2.5l6 2.2v4.6c0 4-2.6 6.8-6 8.2-3.4-1.4-6-4.2-6-8.2V4.7z"/><path d="M7.3 10l1.8 1.8 3.6-3.8"/></svg> Panel administratora';
+    if (location.pathname.endsWith('admin.html')) link.classList.add('is-active');
+    nav.appendChild(link);
+  } else if (!admin && existingAdminLink) {
+    existingAdminLink.remove();
+  }
+
+  if (window.updateNavIndicator) window.updateNavIndicator();
+}
+
+document.addEventListener('DOMContentLoaded', refreshHeader);

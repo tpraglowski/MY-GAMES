@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
       const icon = document.createElement('div');
       icon.className = 'game-card__icon';
-      icon.textContent = '🕹️';
+      icon.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="5"/><line x1="7" y1="10" x2="7" y2="14"/><line x1="5" y1="12" x2="9" y2="12"/><circle cx="15" cy="10.5" r="1"/><circle cx="17.5" cy="13" r="1"/></svg>';
 
       const title = document.createElement('div');
       title.className = 'game-card__title';
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     const addCard = document.createElement('a');
     addCard.className = 'game-card game-card--empty';
     addCard.href = 'add-game.html';
-    addCard.innerHTML = '<div class="game-card__icon">➕</div><div class="game-card__title">Dodaj nową grę</div>';
+    addCard.innerHTML = '<div class="game-card__icon"><svg class="icon" viewBox="0 0 20 20"><line x1="10" y1="4" x2="10" y2="16"/><line x1="4" y1="10" x2="16" y2="10"/></svg></div><div class="game-card__title">Dodaj nową grę</div>';
     grid.appendChild(addCard);
   }
 

@@ -1,5 +1,5 @@
 import { db, authReady, getCurrentUser } from './auth.js';
-import { collection, doc, addDoc, getDoc, getDocs, query, orderBy } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
+import { collection, doc, addDoc, deleteDoc, getDoc, getDocs, query, orderBy } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 
 const gamesCollection = collection(db, 'games');
 
@@ -44,4 +44,9 @@ export async function addGame({ title, scratchUrl, scratchAuthor }) {
   };
   const docRef = await addDoc(gamesCollection, game);
   return Object.assign({ id: docRef.id }, game);
+}
+
+export async function deleteGame(id) {
+  await authReady;
+  await deleteDoc(doc(db, 'games', id));
 }
