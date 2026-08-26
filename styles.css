@@ -343,6 +343,14 @@ main {
   border: 0;
 }
 
-.play-back {
-  display: inline-flex;
+.scratch-embed:fullscreen {
+  max-width: none;
+  aspect-ratio: auto;
+  border-radius: 0;
+  background: #000;
+}
+
+.play-actions {
+  display: flex;
+  gap: 0.75rem;
 }

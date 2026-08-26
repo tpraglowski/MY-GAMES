@@ -61,12 +61,28 @@
       iframe.allowFullscreen = true;
       frameWrap.appendChild(iframe);
 
+      var actions = document.createElement('div');
+      actions.className = 'play-actions';
+
       var backLink = document.createElement('a');
       backLink.className = 'btn btn--ghost play-back';
       backLink.href = 'index.html';
       backLink.textContent = '← Wróć do listy gier';
 
-      page.append(titleEl, metaEl, frameWrap, backLink);
+      var fullscreenBtn = document.createElement('button');
+      fullscreenBtn.type = 'button';
+      fullscreenBtn.className = 'btn btn--accent';
+      fullscreenBtn.textContent = '⛶ Pełny ekran';
+      fullscreenBtn.addEventListener('click', function () {
+        if (frameWrap.requestFullscreen) {
+          frameWrap.requestFullscreen();
+        } else if (frameWrap.webkitRequestFullscreen) {
+          frameWrap.webkitRequestFullscreen();
+        }
+      });
+
+      actions.append(backLink, fullscreenBtn);
+      page.append(titleEl, metaEl, frameWrap, actions);
     }
   </script>
 </body>
