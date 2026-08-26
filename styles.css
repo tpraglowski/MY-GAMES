@@ -497,6 +497,12 @@ main {
   aspect-ratio: 4 / 3;
 }
 
+@media (max-width: 600px) {
+  .scratch-embed--native {
+    aspect-ratio: 3 / 4;
+  }
+}
+
 .play-actions {
   display: flex;
   gap: 0.75rem;
