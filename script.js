@@ -22,7 +22,11 @@ document.addEventListener('DOMContentLoaded', function () {
     meta.className = 'game-card__meta';
     meta.textContent = 'Scratch: ' + game.scratchAuthor;
 
-    card.append(icon, title, meta);
+    const addedBy = document.createElement('div');
+    addedBy.className = 'game-card__meta game-card__added-by';
+    addedBy.textContent = '@' + game.addedBy;
+
+    card.append(icon, title, meta, addedBy);
     grid.appendChild(card);
   });
 

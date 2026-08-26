@@ -217,6 +217,11 @@ main {
   padding: 0 0.5rem;
 }
 
+.game-card__added-by {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .site-footer {
   text-align: center;
   padding: 1.25rem;
