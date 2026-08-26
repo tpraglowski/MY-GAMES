@@ -169,6 +169,24 @@ main {
   color: var(--text-dim);
 }
 
+.search-bar {
+  margin-bottom: 1.5rem;
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.search-bar input::placeholder {
+  color: var(--text-dim);
+}
+
 .game-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
