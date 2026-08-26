@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logowanie - My Games</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<script>
+(function () {
+  var mode = localStorage.getItem('themeMode') || 'auto';
+  if (mode !== 'auto') document.documentElement.setAttribute('data-theme', mode);
+})();
+</script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="logo" href="index.html">🎮 MY GAMES</a>
+    <nav class="site-nav">
+      <a href="index.html">Główne</a>
+      <a href="settings.html">Ustawienia</a>
+    </nav>
+    <div class="account-widget" id="account-widget"></div>
+  </header>
+
+  <main class="auth-page">
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab is-active" data-tab="login">Zaloguj się</button>
+        <button type="button" class="auth-tab" data-tab="register">Zarejestruj się</button>
+      </div>
+
+      <form id="login-form" class="auth-form">
+        <label>Nazwa użytkownika
+          <input type="text" name="username" required autocomplete="username">
+        </label>
+        <label>Hasło
+          <input type="password" name="password" required autocomplete="current-password">
+        </label>
+        <button type="submit" class="btn btn--accent">Zaloguj się</button>
+      </form>
+
+      <form id="register-form" class="auth-form" hidden>
+        <label>Nazwa użytkownika
+          <input type="text" name="username" required autocomplete="username">
+        </label>
+        <label>Hasło
+          <input type="password" name="password" required minlength="4" autocomplete="new-password">
+        </label>
+        <button type="submit" class="btn btn--accent">Utwórz konto</button>
+      </form>
+
+      <p class="auth-error" id="auth-error" hidden></p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>Zrobione z ❤️ i hostowane na GitHub Pages</p>
+  </footer>
+
+  <script src="auth.js"></script>
+  <script src="theme.js"></script>
+  <script>
+    var tabs = document.querySelectorAll('.auth-tab');
+    var loginForm = document.getElementById('login-form');
+    var registerForm = document.getElementById('register-form');
+    var errorEl = document.getElementById('auth-error');
+
+    tabs.forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        tabs.forEach(function (t) { t.classList.remove('is-active'); });
+        tab.classList.add('is-active');
+        errorEl.hidden = true;
+        var isLogin = tab.dataset.tab === 'login';
+        loginForm.hidden = !isLogin;
+        registerForm.hidden = isLogin;
+      });
+    });
+
+    function showError(message) {
+      errorEl.textContent = message;
+      errorEl.hidden = false;
+    }
+
+    loginForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var data = new FormData(loginForm);
+      loginUser(data.get('username').trim(), data.get('password'))
+        .then(function () { window.location.href = 'index.html'; })
+        .catch(function (err) { showError(err.message); });
+    });
+
+    registerForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var data = new FormData(registerForm);
+      registerUser(data.get('username').trim(), data.get('password'))
+        .then(function () { window.location.href = 'index.html'; })
+        .catch(function (err) { showError(err.message); });
+    });
+  </script>
+</body>
+</html>

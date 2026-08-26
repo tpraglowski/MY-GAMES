@@ -1,9 +1,29 @@
 :root {
+  --bg: #f5f6fa;
+  --surface: #ffffff;
+  --accent: #6c5ce7;
+  --accent-text: #ffffff;
+  --text: #1a1d29;
+  --text-dim: #6b6f80;
+  --border: #e1e3ec;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1117;
+    --surface: #1a1d29;
+    --text: #f0f0f5;
+    --text-dim: #9a9db0;
+    --border: #2a2e3f;
+  }
+}
+
+:root[data-theme="dark"] {
   --bg: #0f1117;
   --surface: #1a1d29;
-  --accent: #6c5ce7;
   --text: #f0f0f5;
   --text-dim: #9a9db0;
+  --border: #2a2e3f;
 }
 
 * {
@@ -21,15 +41,73 @@ body {
 }
 
 .site-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
   padding: 1.25rem 2rem;
   background: var(--surface);
-  border-bottom: 1px solid #2a2e3f;
+  border-bottom: 1px solid var(--border);
 }
 
 .logo {
   font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: 0.05em;
+  color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.site-nav {
+  display: flex;
+  gap: 1rem;
+  flex: 1;
+}
+
+.site-nav a {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.site-nav a:hover,
+.site-nav a.is-active {
+  color: var(--text);
+}
+
+.account-widget {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.account-widget__name {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn--accent {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.btn--ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text);
 }
 
 main {
@@ -71,7 +149,7 @@ main {
   border-radius: 16px;
   text-decoration: none;
   color: var(--text);
-  border: 1px solid #2a2e3f;
+  border: 1px solid var(--border);
   transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
@@ -100,5 +178,120 @@ main {
   padding: 1.25rem;
   color: var(--text-dim);
   font-size: 0.85rem;
-  border-top: 1px solid #2a2e3f;
+  border-top: 1px solid var(--border);
+}
+
+.auth-page {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 3rem;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 0.5rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-dim);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-tab.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.auth-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.auth-form input {
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.auth-form .btn {
+  margin-top: 0.5rem;
+}
+
+.auth-error {
+  margin-top: 1rem;
+  color: #e74c3c;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.settings-page h1 {
+  margin-bottom: 1.5rem;
+}
+
+.settings-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.settings-section h2 {
+  margin-top: 0;
+}
+
+.settings-hint {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+.theme-options {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.theme-option {
+  padding: 0.6rem 1.1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.theme-option.is-active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
 }

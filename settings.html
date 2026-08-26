@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Games</title>
+<title>Ustawienia - My Games</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script>
 (function () {
@@ -17,23 +17,23 @@
   <header class="site-header">
     <a class="logo" href="index.html">🎮 MY GAMES</a>
     <nav class="site-nav">
-      <a href="index.html" class="is-active">Główne</a>
-      <a href="settings.html">Ustawienia</a>
+      <a href="index.html">Główne</a>
+      <a href="settings.html" class="is-active">Ustawienia</a>
     </nav>
     <div class="account-widget" id="account-widget"></div>
   </header>
 
-  <main>
-    <section class="hero">
-      <h1>Witaj na stronie z gierkami!</h1>
-      <p>Wybierz grę z listy poniżej, żeby zacząć.</p>
-    </section>
+  <main class="settings-page">
+    <h1>Ustawienia</h1>
 
-    <section class="game-grid" id="game-grid">
-      <a class="game-card game-card--empty" href="#">
-        <div class="game-card__icon">➕</div>
-        <div class="game-card__title">Wkrótce nowa gra</div>
-      </a>
+    <section class="settings-section">
+      <h2>Wygląd</h2>
+      <p class="settings-hint">Wybierz tryb kolorystyczny strony. Tryb „Auto” dopasowuje się do ustawień systemu.</p>
+      <div class="theme-options" id="theme-options">
+        <button type="button" class="theme-option" data-theme-mode="light">☀️ Jasny</button>
+        <button type="button" class="theme-option" data-theme-mode="dark">🌙 Ciemny</button>
+        <button type="button" class="theme-option" data-theme-mode="auto">🖥️ Auto</button>
+      </div>
     </section>
   </main>
 
@@ -43,6 +43,5 @@
 
   <script src="auth.js"></script>
   <script src="theme.js"></script>
-  <script src="script.js"></script>
 </body>
 </html>
