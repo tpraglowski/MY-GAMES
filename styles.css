@@ -220,6 +220,10 @@ main {
   color: var(--accent-text);
 }
 
+.auth-form[hidden] {
+  display: none;
+}
+
 .auth-form {
   display: flex;
   flex-direction: column;
