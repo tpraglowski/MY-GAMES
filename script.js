@@ -12,10 +12,21 @@ document.addEventListener('DOMContentLoaded', async function () {
   function renderGames(games) {
     grid.innerHTML = '';
 
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
     games.forEach(function (game) {
       const card = document.createElement('a');
       card.className = 'game-card';
       card.href = 'play.html?id=' + encodeURIComponent(game.id);
+
+      const isNew = game.addedAt && (Date.now() - new Date(game.addedAt).getTime()) < DAY_MS;
+      if (isNew) {
+        card.classList.add('game-card--new');
+        const badge = document.createElement('span');
+        badge.className = 'game-card__badge';
+        badge.textContent = 'Nowy';
+        card.appendChild(badge);
+      }
 
       const icon = document.createElement('div');
       icon.className = 'game-card__icon';
