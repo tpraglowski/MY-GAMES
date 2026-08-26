@@ -50,18 +50,22 @@
         '<a class="btn btn--accent" href="index.html">Wróć do listy gier</a>' +
         '</div>';
     } else {
+      var isNative = game.type === 'native';
+
       var titleEl = document.createElement('h1');
       titleEl.textContent = game.title;
 
       var metaEl = document.createElement('p');
       metaEl.className = 'play-meta';
-      metaEl.textContent = 'Autor na Scratchu: ' + game.scratchAuthor + ' · Dodał: @' + game.addedBy;
+      metaEl.textContent = isNative
+        ? ('Autor: ' + (game.author || game.addedBy) + ' · Dodał: @' + game.addedBy)
+        : ('Autor na Scratchu: ' + game.scratchAuthor + ' · Dodał: @' + game.addedBy);
 
       var frameWrap = document.createElement('div');
-      frameWrap.className = 'scratch-embed';
+      frameWrap.className = 'scratch-embed' + (isNative ? ' scratch-embed--native' : '');
 
       var iframe = document.createElement('iframe');
-      iframe.src = 'https://scratch.mit.edu/projects/' + encodeURIComponent(game.scratchProjectId) + '/embed';
+      iframe.src = isNative ? game.path : ('https://scratch.mit.edu/projects/' + encodeURIComponent(game.scratchProjectId) + '/embed');
       iframe.allowFullscreen = true;
       frameWrap.appendChild(iframe);
 

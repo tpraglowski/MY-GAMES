@@ -19,8 +19,11 @@ document.addEventListener('DOMContentLoaded', async function () {
       card.className = 'game-card';
       card.href = 'play.html?id=' + encodeURIComponent(game.id);
 
+      const isClaude = (game.addedBy || '').toLowerCase() === 'claude';
       const isNew = game.addedAt && (Date.now() - new Date(game.addedAt).getTime()) < DAY_MS;
-      if (isNew) {
+      if (isClaude) {
+        card.classList.add('game-card--claude');
+      } else if (isNew) {
         card.classList.add('game-card--new');
         const badge = document.createElement('span');
         badge.className = 'game-card__badge';
@@ -38,7 +41,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
       const meta = document.createElement('div');
       meta.className = 'game-card__meta';
-      meta.textContent = 'Scratch: ' + game.scratchAuthor;
+      meta.textContent = (game.type === 'native') ? ('Autor: ' + (game.author || game.addedBy)) : ('Scratch: ' + game.scratchAuthor);
 
       const addedBy = document.createElement('div');
       addedBy.className = 'game-card__meta game-card__added-by';
@@ -63,9 +66,10 @@ document.addEventListener('DOMContentLoaded', async function () {
     const q = query.trim().toLowerCase();
     if (!q) return allGames;
     return allGames.filter(function (game) {
+      const authorText = (game.scratchAuthor || game.author || '').toLowerCase();
       return (
         game.title.toLowerCase().includes(q) ||
-        game.scratchAuthor.toLowerCase().includes(q) ||
+        authorText.includes(q) ||
         game.addedBy.toLowerCase().includes(q)
       );
     });

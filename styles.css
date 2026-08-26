@@ -270,6 +270,14 @@ main {
   border-color: #e74c3c;
 }
 
+.game-card--claude {
+  border-color: #f1c40f;
+}
+
+.game-card--claude:hover {
+  border-color: #f1c40f;
+}
+
 .game-card__badge {
   position: absolute;
   top: 0.6rem;
@@ -449,7 +457,7 @@ main {
 }
 
 .play-page {
-  max-width: 600px;
+  max-width: 720px;
 }
 
 .play-meta {
@@ -482,6 +490,11 @@ main {
   aspect-ratio: auto;
   border-radius: 0;
   background: #000;
+}
+
+.scratch-embed--native {
+  max-width: 700px;
+  aspect-ratio: 4 / 3;
 }
 
 .play-actions {

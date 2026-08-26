@@ -32,6 +32,7 @@ jobs:
         run: |
           mkdir -p dist
           cp index.html login.html settings.html add-game.html play.html admin.html styles.css auth.js games.js nav.js theme.js script.js favicon.svg dist/
+          cp -r games dist/
           cat > dist/firebase-config.js <<EOF
           export const firebaseConfig = {
             apiKey: '${FIREBASE_API_KEY}',

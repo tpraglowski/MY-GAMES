@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moje Życie</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { display: flex; flex-direction: column; background: #1a1d29; color: #f0f0f5; }
+
+  #creator { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; padding: 1rem; overflow: auto; }
+  #creator.is-hidden { display: none; }
+  #creator h1 { margin: 0 0 0.25rem; font-size: 1.2rem; }
+  .creator-layout { display: flex; gap: 1.5rem; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  .creator-preview { width: 110px; flex-shrink: 0; }
+  .swatch-row { display: flex; gap: 0.4rem; flex-wrap: wrap; max-width: 220px; }
+  .swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
+  .swatch.is-active { border-color: #fff; }
+  .creator-field { margin-bottom: 0.7rem; }
+  .creator-field label { display: block; font-size: 0.7rem; color: #9a9db0; margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  #name-input { padding: 0.5rem 0.7rem; border-radius: 8px; border: 1px solid #2a2e3f; background: #0f1117; color: #f0f0f5; font-size: 0.95rem; width: 190px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.55rem 1.2rem; border-radius: 8px; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; background: #6c5ce7; color: #fff; }
+
+  #game { flex: 1; display: none; flex-direction: column; min-height: 0; }
+  #game.is-active { display: flex; }
+
+  #topbar { display: flex; align-items: center; gap: 0.9rem; padding: 0.5rem 0.8rem; background: #0f1117; border-bottom: 1px solid #2a2e3f; font-size: 0.72rem; flex-wrap: wrap; }
+  #topbar .stat { display: flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
+  .bar { width: 54px; height: 7px; border-radius: 99px; background: #2a2e3f; overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: #6c5ce7; }
+  #bar-hunger > span { background: #e67e22; }
+  #bar-energy > span { background: #2ecc71; }
+  #bar-mood > span { background: #e84393; }
+  .bar.is-low > span { background: #e74c3c !important; }
+
+  #room { flex: 1; position: relative; background: linear-gradient(#87ceeb, #fef3c7); transition: background 1s ease; }
+  #char-onstage { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); width: 60px; pointer-events: none; }
+
+  .furniture { position: absolute; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.15rem; font-size: 0.62rem; color: #1a1d29; background: rgba(255,255,255,0.88); padding: 0.35rem 0.45rem; border-radius: 10px; border: 2px solid transparent; transition: transform 0.15s ease, border-color 0.15s ease; }
+  .furniture:hover { transform: translateY(-3px); border-color: #6c5ce7; }
+  .furniture svg { width: 24px; height: 24px; }
+
+  #actionmenu { position: absolute; background: #1a1d29; border: 1px solid #2a2e3f; border-radius: 10px; padding: 0.4rem; display: none; flex-direction: column; gap: 0.25rem; z-index: 5; min-width: 190px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  #actionmenu.is-open { display: flex; }
+  #actionmenu strong { padding: 0.2rem 0.5rem; font-size: 0.75rem; }
+  #actionmenu button { text-align: left; background: transparent; border: none; color: #f0f0f5; padding: 0.4rem 0.5rem; border-radius: 6px; cursor: pointer; font-size: 0.75rem; }
+  #actionmenu button:hover { background: #2a2e3f; }
+
+  #logpanel { height: 96px; overflow-y: auto; background: #0f1117; border-top: 1px solid #2a2e3f; padding: 0.4rem 0.7rem; font-size: 0.7rem; color: #9a9db0; }
+  #logpanel p { margin: 0.15rem 0; }
+  #logpanel p:last-child { color: #f0f0f5; }
+
+  #resetbar { padding: 0.3rem 0.7rem; text-align: right; background: #0f1117; }
+  #resetbar button { background: transparent; border: none; color: #6b6f80; font-size: 0.65rem; cursor: pointer; text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<section id="creator">
+  <h1>Stwórz swoją postać</h1>
+  <div class="creator-layout">
+    <svg id="preview" class="creator-preview" viewBox="0 0 100 140"></svg>
+    <div>
+      <div class="creator-field">
+        <label>Imię</label>
+        <input id="name-input" maxlength="16" placeholder="Imię postaci">
+      </div>
+      <div class="creator-field">
+        <label>Kolor skóry</label>
+        <div class="swatch-row" data-target="skin"></div>
+      </div>
+      <div class="creator-field">
+        <label>Kolor włosów</label>
+        <div class="swatch-row" data-target="hair"></div>
+      </div>
+      <div class="creator-field">
+        <label>Koszulka</label>
+        <div class="swatch-row" data-target="shirt"></div>
+      </div>
+      <div class="creator-field">
+        <label>Spodnie</label>
+        <div class="swatch-row" data-target="pants"></div>
+      </div>
+      <button class="btn" id="start-btn" type="button">Zacznij życie →</button>
+    </div>
+  </div>
+</section>
+
+<section id="game">
+  <div id="topbar">
+    <strong id="char-name-label"></strong>
+    <span class="stat">🕐 <span id="clock-label"></span></span>
+    <span class="stat">📅 Dzień <span id="day-label"></span></span>
+    <span class="stat">💰 <span id="money-label"></span></span>
+    <span class="stat">Głód <span class="bar" id="bar-hunger"><span></span></span></span>
+    <span class="stat">Energia <span class="bar" id="bar-energy"><span></span></span></span>
+    <span class="stat">Nastrój <span class="bar" id="bar-mood"><span></span></span></span>
+  </div>
+
+  <div id="room">
+    <svg id="char-onstage" viewBox="0 0 100 140"></svg>
+
+    <div class="furniture" id="f-bed" style="left:5%; top:14%;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#1a1d29" stroke-width="2"><rect x="2" y="10" width="20" height="8" rx="2"/><path d="M4 10V6a1 1 0 0 1 1-1h6v5"/><line x1="2" y1="18" x2="2" y2="20"/><line x1="22" y1="18" x2="22" y2="20"/></svg>
+      Łóżko
+    </div>
+
+    <div class="furniture" id="f-fridge" style="left:31%; top:9%;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#1a1d29" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="5" y1="10" x2="19" y2="10"/><line x1="8" y1="5" x2="8" y2="7"/><line x1="8" y1="13" x2="8" y2="15"/></svg>
+      Lodówka
+    </div>
+
+    <div class="furniture" id="f-tv" style="left:57%; top:11%;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#1a1d29" stroke-width="2"><rect x="2" y="4" width="20" height="13" rx="2"/><line x1="9" y1="21" x2="15" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      Telewizor
+    </div>
+
+    <div class="furniture" id="f-computer" style="left:79%; top:15%;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#1a1d29" stroke-width="2"><rect x="3" y="4" width="18" height="12" rx="2"/><line x1="8" y1="20" x2="16" y2="20"/><line x1="12" y1="16" x2="12" y2="20"/></svg>
+      Komputer
+    </div>
+
+    <div id="actionmenu"></div>
+  </div>
+
+  <div id="logpanel"></div>
+  <div id="resetbar"><button id="reset-btn" type="button">Zacznij od nowa</button></div>
+</section>
+
+<script>
+(function () {
+  var SAVE_KEY = 'mg_lifesim_save_v1';
+
+  var SKIN_COLORS = ['#ffdbac', '#f1c27d', '#e0ac69', '#c68642', '#8d5524'];
+  var HAIR_COLORS = ['#2c1b10', '#5a3825', '#a05a2c', '#d4a017', '#e0e0e0', '#c0392b'];
+  var SHIRT_COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#1a1d29'];
+  var PANTS_COLORS = ['#2c3e50', '#34495e', '#7f8c8d', '#4a3728', '#1a1d29', '#5d4037'];
+
+  var creatorEl = document.getElementById('creator');
+  var gameEl = document.getElementById('game');
+  var previewSvg = document.getElementById('preview');
+  var onstageSvg = document.getElementById('char-onstage');
+  var nameInput = document.getElementById('name-input');
+  var startBtn = document.getElementById('start-btn');
+  var resetBtn = document.getElementById('reset-btn');
+  var actionMenu = document.getElementById('actionmenu');
+  var roomEl = document.getElementById('room');
+  var logPanel = document.getElementById('logpanel');
+
+  var char = { skin: SKIN_COLORS[0], hair: HAIR_COLORS[0], shirt: SHIRT_COLORS[0], pants: PANTS_COLORS[0] };
+  var state = null;
+
+  function renderCharacterSvg(svgEl) {
+    svgEl.innerHTML =
+      '<rect x="35" y="98" width="12" height="32" rx="4" fill="' + char.pants + '"/>' +
+      '<rect x="53" y="98" width="12" height="32" rx="4" fill="' + char.pants + '"/>' +
+      '<rect x="27" y="58" width="46" height="45" rx="10" fill="' + char.shirt + '"/>' +
+      '<circle cx="24" cy="70" r="7" fill="' + char.skin + '"/>' +
+      '<circle cx="76" cy="70" r="7" fill="' + char.skin + '"/>' +
+      '<circle cx="50" cy="38" r="23" fill="' + char.skin + '"/>' +
+      '<rect x="27" y="14" width="46" height="20" rx="16" fill="' + char.hair + '"/>' +
+      '<circle cx="42" cy="40" r="2.2" fill="#1a1d29"/>' +
+      '<circle cx="58" cy="40" r="2.2" fill="#1a1d29"/>' +
+      '<path d="M42 48 q8 6 16 0" stroke="#1a1d29" stroke-width="2" fill="none" stroke-linecap="round"/>';
+  }
+
+  function buildSwatches(target, colors, key) {
+    var row = document.querySelector('.swatch-row[data-target="' + target + '"]');
+    colors.forEach(function (color, i) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'swatch' + (i === 0 ? ' is-active' : '');
+      b.style.background = color;
+      b.addEventListener('click', function () {
+        char[key] = color;
+        row.querySelectorAll('.swatch').forEach(function (s) { s.classList.remove('is-active'); });
+        b.classList.add('is-active');
+        renderCharacterSvg(previewSvg);
+      });
+      row.appendChild(b);
+    });
+  }
+
+  buildSwatches('skin', SKIN_COLORS, 'skin');
+  buildSwatches('hair', HAIR_COLORS, 'hair');
+  buildSwatches('shirt', SHIRT_COLORS, 'shirt');
+  buildSwatches('pants', PANTS_COLORS, 'pants');
+  renderCharacterSvg(previewSvg);
+
+  function clamp(v) { return Math.max(0, Math.min(100, v)); }
+
+  function addLog(text) {
+    var hh = String(state.hour).padStart(2, '0');
+    state.log.push('Dzień ' + state.day + ', ' + hh + ':00 — ' + text);
+    if (state.log.length > 40) state.log.shift();
+    renderLog();
+  }
+
+  function renderLog() {
+    logPanel.innerHTML = state.log.map(function (l) { return '<p>' + l + '</p>'; }).join('');
+    logPanel.scrollTop = logPanel.scrollHeight;
+  }
+
+  function advanceTime(hours) {
+    var total = state.hour + hours;
+    state.day += Math.floor(total / 24);
+    state.hour = Math.floor(((total % 24) + 24) % 24);
+    var decay = hours / 3;
+    state.hunger = clamp(state.hunger - decay * 4);
+    state.energy = clamp(state.energy - decay * 3);
+    if (state.hunger < 25) state.mood = clamp(state.mood - decay * 2);
+  }
+
+  function roomTint() {
+    var h = state.hour;
+    if (h >= 6 && h < 11) return 'linear-gradient(#a7d8f0, #fef3c7)';
+    if (h >= 11 && h < 18) return 'linear-gradient(#5bb8f5, #cfeaff)';
+    if (h >= 18 && h < 21) return 'linear-gradient(#2c3e70, #e8825a)';
+    return 'linear-gradient(#0a0e27, #1a1d29)';
+  }
+
+  function refreshUI() {
+    document.getElementById('clock-label').textContent = String(state.hour).padStart(2, '0') + ':00';
+    document.getElementById('day-label').textContent = state.day;
+    document.getElementById('money-label').textContent = Math.round(state.money) + ' zł';
+    document.querySelector('#bar-hunger > span').style.width = state.hunger + '%';
+    document.querySelector('#bar-energy > span').style.width = state.energy + '%';
+    document.querySelector('#bar-mood > span').style.width = state.mood + '%';
+    document.getElementById('bar-hunger').classList.toggle('is-low', state.hunger < 25);
+    document.getElementById('bar-energy').classList.toggle('is-low', state.energy < 25);
+    document.getElementById('bar-mood').classList.toggle('is-low', state.mood < 25);
+    roomEl.style.background = roomTint();
+    save();
+  }
+
+  function save() {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  }
+
+  function doAction(effect, message) {
+    effect();
+    addLog(message);
+    refreshUI();
+    closeMenu();
+  }
+
+  var MENUS = {
+    'f-bed': {
+      title: 'Łóżko',
+      actions: [
+        {
+          label: 'Śpij do rana (+energia)',
+          run: function () {
+            var hoursToMorning = (7 - state.hour + 24) % 24 || 24;
+            advanceTime(hoursToMorning);
+            state.energy = clamp(state.energy + 60);
+            state.mood = clamp(state.mood + 5);
+          },
+          msg: 'Wyspałeś się. Obudziłeś się o 7:00.',
+        },
+        {
+          label: 'Zdrzemnij się 2h',
+          run: function () { advanceTime(2); state.energy = clamp(state.energy + 20); },
+          msg: 'Zdrzemnąłeś się przez 2 godziny.',
+        },
+      ],
+    },
+    'f-fridge': {
+      title: 'Lodówka',
+      actions: [
+        {
+          label: 'Zjedz przekąskę (-2 zł)',
+          run: function () { advanceTime(0.5); state.hunger = clamp(state.hunger + 20); state.money -= 2; },
+          msg: 'Zjadłeś małą przekąskę.',
+        },
+        {
+          label: 'Ugotuj pełny posiłek (-10 zł)',
+          run: function () { advanceTime(1); state.hunger = clamp(state.hunger + 55); state.mood = clamp(state.mood + 5); state.money -= 10; },
+          msg: 'Ugotowałeś sobie pełny posiłek.',
+        },
+      ],
+    },
+    'f-tv': {
+      title: 'Telewizor',
+      actions: [
+        {
+          label: 'Obejrzyj serial (2h)',
+          run: function () { advanceTime(2); state.mood = clamp(state.mood + 20); },
+          msg: 'Obejrzałeś odcinek ulubionego serialu.',
+        },
+      ],
+    },
+    'f-computer': {
+      title: 'Komputer',
+      actions: [
+        {
+          label: 'Popracuj zdalnie (6h, +60 zł)',
+          run: function () { advanceTime(6); state.money += 60; state.energy = clamp(state.energy - 25); state.mood = clamp(state.mood - 5); },
+          msg: 'Popracowałeś zdalnie i zarobiłeś 60 zł.',
+        },
+        {
+          label: 'Zagraj w grę (1h)',
+          run: function () { advanceTime(1); state.mood = clamp(state.mood + 15); state.energy = clamp(state.energy - 5); },
+          msg: 'Zagrałeś chwilę na komputerze.',
+        },
+      ],
+    },
+  };
+
+  function openMenu(key, targetEl) {
+    var def = MENUS[key];
+    actionMenu.innerHTML = '';
+    var titleEl = document.createElement('strong');
+    titleEl.textContent = def.title;
+    actionMenu.appendChild(titleEl);
+    def.actions.forEach(function (action) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = action.label;
+      b.addEventListener('click', function () { doAction(action.run, action.msg); });
+      actionMenu.appendChild(b);
+    });
+    var rect = targetEl.getBoundingClientRect();
+    var roomRect = roomEl.getBoundingClientRect();
+    actionMenu.style.left = Math.max(4, rect.left - roomRect.left) + 'px';
+    actionMenu.style.top = (rect.bottom - roomRect.top + 6) + 'px';
+    actionMenu.classList.add('is-open');
+  }
+
+  function closeMenu() {
+    actionMenu.classList.remove('is-open');
+  }
+
+  Object.keys(MENUS).forEach(function (key) {
+    document.getElementById(key).addEventListener('click', function (e) {
+      e.stopPropagation();
+      openMenu(key, e.currentTarget);
+    });
+  });
+
+  document.addEventListener('click', closeMenu);
+  actionMenu.addEventListener('click', function (e) { e.stopPropagation(); });
+
+  function startGame() {
+    creatorEl.classList.add('is-hidden');
+    gameEl.classList.add('is-active');
+    renderCharacterSvg(onstageSvg);
+    document.getElementById('char-name-label').textContent = state.name;
+    renderLog();
+    refreshUI();
+  }
+
+  startBtn.addEventListener('click', function () {
+    var name = nameInput.value.trim() || 'Bohater';
+    state = {
+      name: name,
+      char: char,
+      hunger: 80, energy: 90, mood: 70, money: 40,
+      day: 1, hour: 8,
+      log: [],
+    };
+    addLog('Zaczynasz nowe życie jako ' + name + '.');
+    startGame();
+  });
+
+  resetBtn.addEventListener('click', function () {
+    if (!confirm('Na pewno zacząć od nowa? Stracisz obecny postęp.')) return;
+    localStorage.removeItem(SAVE_KEY);
+    location.reload();
+  });
+
+  var saved = localStorage.getItem(SAVE_KEY);
+  if (saved) {
+    try {
+      state = JSON.parse(saved);
+      char = state.char;
+      nameInput.value = state.name;
+      startGame();
+    } catch (e) {
+      state = null;
+    }
+  }
+})();
+</script>
+</body>
+</html>
