@@ -143,13 +143,14 @@ export function renderAccountWidget() {
     logoutBtn.addEventListener('click', function () {
       logoutUser();
       refreshHeader();
+      if (window.rerunRoute) window.rerunRoute();
     });
 
     widget.append(name, logoutBtn);
   } else {
     const loginLink = document.createElement('a');
     loginLink.className = 'btn btn--accent';
-    loginLink.href = 'login.html';
+    loginLink.href = '#/login';
     loginLink.textContent = 'Zaloguj się';
     widget.append(loginLink);
   }
@@ -165,16 +166,18 @@ export async function refreshHeader() {
 
   if (admin && !existingAdminLink) {
     const link = document.createElement('a');
-    link.href = 'admin.html';
+    link.href = '#/admin';
     link.dataset.nav = 'admin';
     link.innerHTML = '<svg class="icon" viewBox="0 0 20 20"><path d="M10 2.5l6 2.2v4.6c0 4-2.6 6.8-6 8.2-3.4-1.4-6-4.2-6-8.2V4.7z"/><path d="M7.3 10l1.8 1.8 3.6-3.8"/></svg> Panel administratora';
-    if (location.pathname.endsWith('admin.html')) link.classList.add('is-active');
     nav.appendChild(link);
   } else if (!admin && existingAdminLink) {
     existingAdminLink.remove();
   }
 
-  if (window.updateNavIndicator) window.updateNavIndicator();
+  // The router (app.js) owns which nav link is .is-active; ask it to
+  // re-apply that now that the admin link may have just appeared/vanished.
+  if (window.markActiveNav) window.markActiveNav();
+  else if (window.updateNavIndicator) window.updateNavIndicator();
 }
 
 document.addEventListener('DOMContentLoaded', refreshHeader);

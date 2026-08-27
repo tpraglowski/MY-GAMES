@@ -15,32 +15,134 @@
 </head>
 <body>
   <header class="site-header">
-    <a class="logo" href="index.html"><svg class="icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="5"/><line x1="7" y1="10" x2="7" y2="14"/><line x1="5" y1="12" x2="9" y2="12"/><circle cx="15" cy="10.5" r="1"/><circle cx="17.5" cy="13" r="1"/></svg> MY GAMES</a>
+    <a class="logo" href="#/"><svg class="icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="5"/><line x1="7" y1="10" x2="7" y2="14"/><line x1="5" y1="12" x2="9" y2="12"/><circle cx="15" cy="10.5" r="1"/><circle cx="17.5" cy="13" r="1"/></svg> MY GAMES</a>
     <nav class="site-nav" id="site-nav">
       <span class="nav-indicator" id="nav-indicator"></span>
-      <a href="index.html" data-nav="index" class="is-active">Główne</a>
-      <a href="settings.html" data-nav="settings">Ustawienia</a>
-      <a href="add-game.html" data-nav="add-game">+ Dodaj grę</a>
+      <a href="#/" data-nav="games">Główne</a>
+      <a href="#/settings" data-nav="settings">Ustawienia</a>
+      <a href="#/add-game" data-nav="add-game">+ Dodaj grę</a>
     </nav>
     <div class="account-widget" id="account-widget"></div>
   </header>
 
   <main>
-    <section class="hero">
-      <h1>Witaj na stronie z gierkami!</h1>
-      <p>Wybierz grę z listy poniżej, żeby zacząć.</p>
+    <!-- ---------- Games list ---------- -->
+    <section id="view-games" class="view">
+      <section class="hero">
+        <h1>Witaj na stronie z gierkami!</h1>
+        <p>Wybierz grę z listy poniżej, żeby zacząć.</p>
+      </section>
+
+      <section class="search-bar">
+        <div class="search-bar__wrap">
+          <svg class="icon search-bar__icon" viewBox="0 0 20 20"><circle cx="9" cy="9" r="6"/><line x1="13.5" y1="13.5" x2="18" y2="18"/></svg>
+          <input type="search" id="game-search" placeholder="Szukaj gry po tytule, autorze lub użytkowniku...">
+        </div>
+      </section>
+
+      <p class="settings-hint" id="no-results" hidden>Brak gier pasujących do wyszukiwania.</p>
+
+      <section class="game-grid" id="game-grid"></section>
     </section>
 
-    <section class="search-bar">
-      <div class="search-bar__wrap">
-        <svg class="icon search-bar__icon" viewBox="0 0 20 20"><circle cx="9" cy="9" r="6"/><line x1="13.5" y1="13.5" x2="18" y2="18"/></svg>
-        <input type="search" id="game-search" placeholder="Szukaj gry po tytule, autorze lub użytkowniku...">
+    <!-- ---------- Login / register ---------- -->
+    <section id="view-login" class="view" hidden>
+      <div class="auth-page">
+        <div class="auth-card">
+          <div class="auth-tabs">
+            <button type="button" class="auth-tab is-active" data-tab="login">Zaloguj się</button>
+            <button type="button" class="auth-tab" data-tab="register">Zarejestruj się</button>
+          </div>
+
+          <div id="auth-form-container"></div>
+
+          <p class="auth-error" id="auth-error" hidden></p>
+        </div>
+      </div>
+
+      <template id="login-template">
+        <form id="login-form" class="auth-form">
+          <label>Nazwa użytkownika
+            <input type="text" name="username" required autocomplete="username">
+          </label>
+          <label>Hasło
+            <input type="password" name="password" required autocomplete="current-password">
+          </label>
+          <button type="submit" class="btn btn--accent">Zaloguj się</button>
+        </form>
+      </template>
+
+      <template id="register-template">
+        <form id="register-form" class="auth-form">
+          <label>Nazwa użytkownika
+            <input type="text" name="username" required autocomplete="username">
+          </label>
+          <label>Hasło
+            <input type="password" name="password" required minlength="8" autocomplete="new-password">
+          </label>
+          <button type="submit" class="btn btn--accent">Utwórz konto</button>
+        </form>
+      </template>
+    </section>
+
+    <!-- ---------- Settings ---------- -->
+    <section id="view-settings" class="view settings-page" hidden>
+      <h1>Ustawienia</h1>
+
+      <section class="settings-section">
+        <h2>Wygląd</h2>
+        <p class="settings-hint">Wybierz tryb kolorystyczny strony. Tryb „Auto” dopasowuje się do ustawień systemu.</p>
+        <div class="theme-options" id="theme-options">
+          <button type="button" class="theme-option" data-theme-mode="light"><svg class="icon" viewBox="0 0 20 20"><circle cx="10" cy="10" r="3.2"/><line x1="10" y1="2" x2="10" y2="4.2"/><line x1="10" y1="15.8" x2="10" y2="18"/><line x1="2" y1="10" x2="4.2" y2="10"/><line x1="15.8" y1="10" x2="18" y2="10"/><line x1="4.6" y1="4.6" x2="6.1" y2="6.1"/><line x1="13.9" y1="13.9" x2="15.4" y2="15.4"/><line x1="4.6" y1="15.4" x2="6.1" y2="13.9"/><line x1="13.9" y1="6.1" x2="15.4" y2="4.6"/></svg> Jasny</button>
+          <button type="button" class="theme-option" data-theme-mode="dark"><svg class="icon" viewBox="0 0 20 20"><path d="M16 12.5A6.5 6.5 0 1 1 7.5 4a5.2 5.2 0 0 0 8.5 8.5z"/></svg> Ciemny</button>
+          <button type="button" class="theme-option" data-theme-mode="auto"><svg class="icon" viewBox="0 0 20 20"><rect x="2.5" y="3.5" width="15" height="10" rx="1.2"/><line x1="7" y1="17" x2="13" y2="17"/><line x1="10" y1="13.5" x2="10" y2="17"/></svg> Auto</button>
+        </div>
+      </section>
+    </section>
+
+    <!-- ---------- Add game ---------- -->
+    <section id="view-add-game" class="view" hidden>
+      <div class="form-page">
+        <div class="form-card">
+          <h1>Dodaj grę</h1>
+          <p class="settings-hint">Wklej link do swojego projektu na Scratchu, żeby dodać go do listy gier.</p>
+
+          <form id="add-game-form" class="auth-form">
+            <label>Tytuł gry
+              <input type="text" name="title" required>
+            </label>
+            <label>Link do gry na Scratchu
+              <input type="url" name="scratchUrl" placeholder="https://scratch.mit.edu/projects/123456789/" required>
+            </label>
+            <label>Nazwa użytkownika Scratch autora gry
+              <input type="text" name="scratchAuthor" required>
+            </label>
+            <button type="submit" class="btn btn--accent">Dodaj grę</button>
+          </form>
+
+          <p class="auth-error" id="add-game-error" hidden></p>
+
+          <div id="login-required" hidden>
+            <p class="settings-hint">Musisz się zalogować, żeby dodać grę.</p>
+            <a class="btn btn--accent" href="#/login">Zaloguj się</a>
+          </div>
+        </div>
       </div>
     </section>
 
-    <p class="settings-hint" id="no-results" hidden>Brak gier pasujących do wyszukiwania.</p>
+    <!-- ---------- Play ---------- -->
+    <section id="view-play" class="view play-page" hidden></section>
 
-    <section class="game-grid" id="game-grid"></section>
+    <!-- ---------- Admin ---------- -->
+    <section id="view-admin" class="view settings-page" hidden>
+      <h1>Panel administratora</h1>
+      <p class="settings-hint" id="admin-denied" hidden>Nie masz dostępu do tej strony.</p>
+      <section class="settings-section" id="accounts-section" hidden>
+        <h2>Konta użytkowników</h2>
+        <p class="settings-hint">Nadawaj i odbieraj status administratora.</p>
+        <div id="accounts-list"></div>
+      </section>
+    </section>
   </main>
 
   <footer class="site-footer">
@@ -49,6 +151,6 @@
 
   <script src="theme.js"></script>
   <script src="nav.js"></script>
-  <script type="module" src="script.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>

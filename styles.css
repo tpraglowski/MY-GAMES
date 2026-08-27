@@ -185,6 +185,12 @@ main {
   width: 100%;
 }
 
+/* Higher specificity than any single utility class (e.g. .form-page's
+   display:flex) so the router can never accidentally leave a view visible. */
+.view[hidden] {
+  display: none !important;
+}
+
 .hero {
   text-align: center;
   margin-bottom: 2.5rem;

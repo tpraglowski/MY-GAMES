@@ -10,13 +10,19 @@ function setIndicator(nav, indicator, link) {
   indicator.style.transform = 'translateX(' + (linkRect.left - navRect.left) + 'px)';
 }
 
-// Exposed globally so auth.js (an ES module, loaded separately) can ask the
-// indicator to re-measure after it inserts/removes the admin nav link.
-window.updateNavIndicator = function () {
+// Exposed globally so app.js (router) and auth.js (an ES module, loaded
+// separately) can move the indicator without a page reload. Pass true to let
+// the CSS transition animate the move (route changes); omit/false to snap
+// instantly (e.g. right after the admin nav link is inserted or removed).
+window.updateNavIndicator = function (animate) {
   const nav = document.getElementById('site-nav');
   const indicator = document.getElementById('nav-indicator');
   if (!nav || !indicator) return;
   const current = nav.querySelector('a.is-active');
+  if (animate) {
+    setIndicator(nav, indicator, current);
+    return;
+  }
   indicator.style.transition = 'none';
   setIndicator(nav, indicator, current);
   indicator.offsetHeight;
@@ -24,29 +30,5 @@ window.updateNavIndicator = function () {
 };
 
 document.addEventListener('DOMContentLoaded', function () {
-  const nav = document.getElementById('site-nav');
-  const indicator = document.getElementById('nav-indicator');
-  if (!nav || !indicator) return;
-
-  const NAV_KEY = 'mg_last_nav';
-  const current = nav.querySelector('a.is-active');
-
-  const previousKey = sessionStorage.getItem(NAV_KEY);
-  const currentKey = current ? current.dataset.nav : '';
-  const previousLink = previousKey && previousKey !== currentKey
-    ? nav.querySelector('[data-nav="' + previousKey + '"]')
-    : null;
-
-  indicator.style.transition = 'none';
-  setIndicator(nav, indicator, previousLink || current);
-  indicator.offsetHeight;
-  indicator.style.transition = '';
-
-  if (previousLink) {
-    requestAnimationFrame(function () {
-      setIndicator(nav, indicator, current);
-    });
-  }
-
-  sessionStorage.setItem(NAV_KEY, currentKey);
+  window.updateNavIndicator(false);
 });

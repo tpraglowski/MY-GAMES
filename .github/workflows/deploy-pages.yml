@@ -31,7 +31,7 @@ jobs:
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
         run: |
           mkdir -p dist
-          cp index.html login.html settings.html add-game.html play.html admin.html styles.css auth.js games.js nav.js theme.js script.js favicon.svg dist/
+          cp index.html styles.css auth.js games.js nav.js theme.js app.js favicon.svg dist/
           cp -r games dist/
           cat > dist/firebase-config.js <<EOF
           export const firebaseConfig = {
