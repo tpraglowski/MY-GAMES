@@ -29,7 +29,7 @@ service cloud.firestore {
     }
     function isAdmin() {
       return isSignedIn() && exists(/databases/$(database)/documents/uidAccount/$(request.auth.uid)) &&
-        (myAccountId() == 'tpraglowski' || get(/databases/$(database)/documents/accounts/$(myAccountId())).data.admin == true);
+        (myAccountId() == 'tpraglowski' || get(/databases/$(database)/documents/accounts/$(myAccountId())).data.get('admin', false) == true);
     }
     function changedFields() {
       return request.resource.data.diff(resource.data).affectedKeys();
@@ -46,7 +46,7 @@ service cloud.firestore {
       allow read: if isSignedIn();
       // Registration: anyone signed in (anonymously) may create their own account,
       // but cannot hand themselves admin on the way in.
-      allow create: if isSignedIn() && request.resource.data.admin != true;
+      allow create: if isSignedIn() && request.resource.data.get('admin', false) != true;
       // Update: either it's your own account or you're an admin — and only an admin
       // may change the `admin` field itself.
       allow update: if isSignedIn() && (isMe(accountId) || isAdmin())
