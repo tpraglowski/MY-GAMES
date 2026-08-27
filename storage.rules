@@ -1,0 +1,24 @@
+// My Games — Firebase Storage Security Rules
+//
+// Not wired to any deploy step — publishing this means pasting it into
+// Firebase console → Storage → Rules → Publish.
+//
+// Uploaded Scratch project files (.sb3, exported from the Scratch editor via
+// File → Save to your computer) live under games/{fileName}. Anyone can read
+// them (needed so the sb3 player on the play view can load them for every
+// visitor, logged in or not) but only a signed-in visitor (anonymous auth,
+// same as Firestore — see firestore.rules) may upload, and only small .sb3
+// files.
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /games/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.resource.size < 15 * 1024 * 1024
+        && fileName.matches('.*[.]sb3$');
+      allow delete: if request.auth != null;
+    }
+  }
+}

@@ -2,6 +2,7 @@ import { firebaseConfig } from './firebase-config.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
 import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
+import { getStorage } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-storage.js';
 
 // Accounts are our own system, stored as Firestore documents (id = normalized
 // username) — not Firebase Auth users. Every visitor also signs in anonymously so
@@ -10,6 +11,7 @@ import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, colle
 export const firebaseApp = initializeApp(firebaseConfig);
 export const auth = getAuth(firebaseApp);
 export const db = getFirestore(firebaseApp);
+export const storage = getStorage(firebaseApp);
 
 export const authReady = signInAnonymously(auth).catch(function (err) {
   console.error('Anonimowe logowanie do Firebase nie powiodło się', err);

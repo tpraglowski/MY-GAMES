@@ -8,7 +8,7 @@ import {
   setAccountAdmin,
   deleteAccount,
 } from './auth.js';
-import { getGames, getGameById, addGame, deleteGame } from './games.js';
+import { getGames, getGameById, addGame, addFileGame, deleteGame } from './games.js';
 
 const VIEWS = ['games', 'login', 'settings', 'add-game', 'play', 'admin'];
 const TITLES = {
@@ -104,7 +104,7 @@ async function initGamesView() {
 
       const meta = document.createElement('div');
       meta.className = 'game-card__meta';
-      meta.textContent = game.type === 'native' ? 'Autor: ' + (game.author || game.addedBy) : 'Scratch: ' + game.scratchAuthor;
+      meta.textContent = game.type ? 'Autor: ' + (game.author || game.addedBy) : 'Scratch: ' + game.scratchAuthor;
 
       const addedBy = document.createElement('div');
       addedBy.className = 'game-card__meta game-card__added-by';
@@ -193,19 +193,34 @@ function initLoginView() {
 // ---------- Add game ----------
 
 function initAddGameView() {
-  const form = document.getElementById('add-game-form');
+  const modeTabsWrap = document.getElementById('add-game-mode-tabs');
+  const modeTabs = modeTabsWrap.querySelectorAll('.auth-tab');
+  const scratchForm = document.getElementById('add-game-form-scratch');
+  const fileForm = document.getElementById('add-game-form-file');
   const errorEl = document.getElementById('add-game-error');
   const loginRequired = document.getElementById('login-required');
 
-  form.reset();
+  scratchForm.reset();
+  fileForm.reset();
   errorEl.hidden = true;
-  const loggedIn = !!getCurrentUser();
-  form.hidden = !loggedIn;
-  loginRequired.hidden = loggedIn;
 
-  form.onsubmit = async (e) => {
+  const loggedIn = !!getCurrentUser();
+  loginRequired.hidden = loggedIn;
+  modeTabsWrap.hidden = !loggedIn;
+
+  function setMode(mode) {
+    modeTabs.forEach((t) => t.classList.toggle('is-active', t.dataset.mode === mode));
+    scratchForm.hidden = !loggedIn || mode !== 'scratch';
+    fileForm.hidden = !loggedIn || mode !== 'file';
+  }
+  modeTabs.forEach((t) => {
+    t.onclick = () => setMode(t.dataset.mode);
+  });
+  setMode('scratch');
+
+  scratchForm.onsubmit = async (e) => {
     e.preventDefault();
-    const data = new FormData(form);
+    const data = new FormData(scratchForm);
     try {
       const game = await addGame({
         title: data.get('title'),
@@ -216,6 +231,26 @@ function initAddGameView() {
     } catch (err) {
       errorEl.textContent = err.message;
       errorEl.hidden = false;
+    }
+  };
+
+  fileForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const data = new FormData(fileForm);
+    const submitBtn = fileForm.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    try {
+      const game = await addFileGame({
+        title: data.get('title'),
+        file: data.get('file'),
+        author: data.get('author'),
+      });
+      location.hash = '/play/' + encodeURIComponent(game.id);
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.hidden = false;
+    } finally {
+      submitBtn.disabled = false;
     }
   };
 }
@@ -237,22 +272,29 @@ async function initPlayView(gameId) {
     return;
   }
 
-  const isNative = game.type === 'native';
+  const isScratch = !game.type; // legacy docs never had a `type` field
+  const isNonScratch = !isScratch; // 'native' (dev-added) or 'sb3' (uploaded)
 
   const titleEl = document.createElement('h1');
   titleEl.textContent = game.title;
 
   const metaEl = document.createElement('p');
   metaEl.className = 'play-meta';
-  metaEl.textContent = isNative
+  metaEl.textContent = isNonScratch
     ? 'Autor: ' + (game.author || game.addedBy) + ' · Dodał: @' + game.addedBy
     : 'Autor na Scratchu: ' + game.scratchAuthor + ' · Dodał: @' + game.addedBy;
 
   const frameWrap = document.createElement('div');
-  frameWrap.className = 'scratch-embed' + (isNative ? ' scratch-embed--native' : '');
+  frameWrap.className = 'scratch-embed' + (isNonScratch ? ' scratch-embed--native' : '');
 
   const iframe = document.createElement('iframe');
-  iframe.src = isNative ? game.path : 'https://scratch.mit.edu/projects/' + encodeURIComponent(game.scratchProjectId) + '/embed';
+  if (game.type === 'sb3') {
+    iframe.src = 'games/sb3-player/index.html?url=' + encodeURIComponent(game.path);
+  } else if (game.type === 'native') {
+    iframe.src = game.path;
+  } else {
+    iframe.src = 'https://scratch.mit.edu/projects/' + encodeURIComponent(game.scratchProjectId) + '/embed';
+  }
   iframe.allowFullscreen = true;
   frameWrap.appendChild(iframe);
 

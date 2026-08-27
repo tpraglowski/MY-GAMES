@@ -105,9 +105,14 @@
       <div class="form-page">
         <div class="form-card">
           <h1>Dodaj grę</h1>
-          <p class="settings-hint">Wklej link do swojego projektu na Scratchu, żeby dodać go do listy gier.</p>
 
-          <form id="add-game-form" class="auth-form">
+          <div class="auth-tabs" id="add-game-mode-tabs">
+            <button type="button" class="auth-tab is-active" data-mode="scratch">Link ze Scratcha</button>
+            <button type="button" class="auth-tab" data-mode="file">Plik gry (.html)</button>
+          </div>
+
+          <form id="add-game-form-scratch" class="auth-form">
+            <p class="settings-hint">Wklej link do swojego projektu na Scratchu, żeby dodać go do listy gier.</p>
             <label>Tytuł gry
               <input type="text" name="title" required>
             </label>
@@ -116,6 +121,20 @@
             </label>
             <label>Nazwa użytkownika Scratch autora gry
               <input type="text" name="scratchAuthor" required>
+            </label>
+            <button type="submit" class="btn btn--accent">Dodaj grę</button>
+          </form>
+
+          <form id="add-game-form-file" class="auth-form" hidden>
+            <p class="settings-hint">Wgraj plik .sb3 swojego projektu ze Scratcha (Scratch → Plik → Zapisz na komputerze), do 15 MB.</p>
+            <label>Tytuł gry
+              <input type="text" name="title" required>
+            </label>
+            <label>Plik gry (.sb3)
+              <input type="file" name="file" accept=".sb3" required>
+            </label>
+            <label>Autor gry
+              <input type="text" name="author" required>
             </label>
             <button type="submit" class="btn btn--accent">Dodaj grę</button>
           </form>
