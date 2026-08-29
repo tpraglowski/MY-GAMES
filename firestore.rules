@@ -62,8 +62,9 @@ service cloud.firestore {
       // (for display), while myAccountId() is always lowercase (it's the accounts
       // doc id) — .lower() both sides so e.g. "Tomek" still matches "tomek".
       allow create: if isSignedIn() && request.resource.data.addedBy.lower() == myAccountId();
-      // The uploader can delete/edit their own game; an admin can delete any game.
-      allow update: if isMe(resource.data.addedBy.lower());
+      // The uploader can edit/delete their own game; an admin can edit or delete any
+      // game (e.g. to fix up a category the original uploader left as "inne").
+      allow update: if isMe(resource.data.addedBy.lower()) || isAdmin();
       allow delete: if isMe(resource.data.addedBy.lower()) || isAdmin();
     }
   }

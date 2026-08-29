@@ -544,6 +544,11 @@ main {
   }
 }
 
+.play-category-edit {
+  max-width: 220px;
+  margin: 0.75rem 0;
+}
+
 .play-actions {
   display: flex;
   gap: 0.75rem;

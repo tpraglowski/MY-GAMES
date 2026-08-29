@@ -8,7 +8,7 @@ import {
   setAccountAdmin,
   deleteAccount,
 } from './auth.js';
-import { getGames, getGameById, addGame, deleteGame } from './games.js';
+import { getGames, getGameById, addGame, deleteGame, updateGameCategory, CATEGORIES } from './games.js';
 
 const CATEGORY_LABELS = {
   platformowa: 'Platformowa',
@@ -333,6 +333,40 @@ async function initPlayView(gameId) {
 
   const currentUser = getCurrentUser();
   const canDelete = currentUser === game.addedBy || (await isCurrentUserAdmin());
+
+  let categoryEditEl = null;
+  if (canDelete) {
+    categoryEditEl = document.createElement('label');
+    categoryEditEl.className = 'filter-field play-category-edit';
+    categoryEditEl.textContent = 'Kategoria';
+
+    const categorySelectEl = document.createElement('select');
+    CATEGORIES.forEach((cat) => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.textContent = CATEGORY_LABELS[cat];
+      if ((game.category || 'inne') === cat) opt.selected = true;
+      categorySelectEl.appendChild(opt);
+    });
+    categorySelectEl.addEventListener('change', async () => {
+      const newCategory = categorySelectEl.value;
+      categorySelectEl.disabled = true;
+      try {
+        await updateGameCategory(gameId, newCategory);
+        game.category = newCategory;
+        metaEl.textContent = isNative
+          ? 'Kategoria: ' + categoryLabel(game) + ' · Autor: ' + (game.author || game.addedBy) + ' · Dodał: @' + game.addedBy
+          : 'Kategoria: ' + categoryLabel(game) + ' · Autor na Scratchu: ' + game.scratchAuthor + ' · Dodał: @' + game.addedBy;
+      } catch (err) {
+        alert('Nie udało się zmienić kategorii: ' + err.message);
+      } finally {
+        categorySelectEl.disabled = false;
+      }
+    });
+
+    categoryEditEl.appendChild(categorySelectEl);
+  }
+
   if (canDelete) {
     const deleteBtn = document.createElement('button');
     deleteBtn.type = 'button';
@@ -352,7 +386,9 @@ async function initPlayView(gameId) {
     actions.append(deleteBtn);
   }
 
-  page.append(titleEl, metaEl, frameWrap, actions);
+  page.append(titleEl, metaEl);
+  if (categoryEditEl) page.append(categoryEditEl);
+  page.append(frameWrap, actions);
 }
 
 // ---------- Admin ----------
