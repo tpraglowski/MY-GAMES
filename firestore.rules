@@ -58,10 +58,13 @@ service cloud.firestore {
       allow read: if isSignedIn();
       // A game can only be created with addedBy set to the account actually making
       // the request — the app can't spoof "posted by someone else" server-side.
-      allow create: if isSignedIn() && request.resource.data.addedBy == myAccountId();
+      // addedBy is stored with whatever casing the user originally registered with
+      // (for display), while myAccountId() is always lowercase (it's the accounts
+      // doc id) — .lower() both sides so e.g. "Tomek" still matches "tomek".
+      allow create: if isSignedIn() && request.resource.data.addedBy.lower() == myAccountId();
       // The uploader can delete/edit their own game; an admin can delete any game.
-      allow update: if isMe(resource.data.addedBy);
-      allow delete: if isMe(resource.data.addedBy) || isAdmin();
+      allow update: if isMe(resource.data.addedBy.lower());
+      allow delete: if isMe(resource.data.addedBy.lower()) || isAdmin();
     }
   }
 }
