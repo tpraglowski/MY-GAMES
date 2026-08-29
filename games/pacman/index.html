@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pac-Man</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; overscroll-behavior: none; }
+  body { display: flex; flex-direction: column; background: #0a0c14; color: #f0f0f5; }
+
+  #start-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; padding: 1.5rem; text-align: center; }
+  #start-screen.is-hidden { display: none; }
+  #start-screen h1 { margin: 0; font-size: 1.4rem; }
+  #start-screen p { margin: 0; color: #9a9db0; font-size: 0.85rem; max-width: 320px; line-height: 1.5; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1.4rem; border-radius: 8px; border: none; font-size: 0.9rem; font-weight: 700; cursor: pointer; background: #6c5ce7; color: #fff; }
+
+  #game-screen { flex: 1; display: none; flex-direction: column; min-height: 0; }
+  #game-screen.is-active { display: flex; }
+
+  #hud { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.8rem; background: #0a0c14; border-bottom: 1px solid #23273a; font-size: 0.8rem; gap: 0.6rem; }
+  #hud .hud-left { display: flex; align-items: center; gap: 0.6rem; }
+  #lives { display: flex; gap: 0.25rem; }
+  #lives svg { width: 16px; height: 16px; }
+  #hud button { background: transparent; border: 1px solid #2a2e3f; color: #9a9db0; border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.7rem; cursor: pointer; }
+
+  #canvas-wrap { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; min-height: 0; padding: 0.5rem; }
+  #game-canvas { max-width: 100%; max-height: 100%; background: #04050a; border-radius: 8px; touch-action: none; }
+
+  #message-overlay { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(10,12,20,0.92); border-radius: 12px; padding: 1rem 1.6rem; text-align: center; display: none; }
+  #message-overlay.is-visible { display: block; }
+  #message-overlay h2 { margin: 0 0 0.4rem; font-size: 1.15rem; }
+  #message-overlay p { margin: 0 0 0.6rem; font-size: 0.8rem; color: #9a9db0; }
+  #message-overlay .btn { display: none; }
+  #message-overlay.has-action .btn { display: inline-flex; }
+
+  #dpad { position: relative; width: 130px; height: 130px; margin: 0.4rem auto 0.8rem; }
+  #dpad button { position: absolute; width: 42px; height: 42px; border-radius: 10px; border: none; background: rgba(255,255,255,0.08); color: #f0f0f5; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; touch-action: none; user-select: none; }
+  #dpad button:active, #dpad button.is-active { background: #6c5ce7; }
+  #dpad .d-up { left: 44px; top: 0; }
+  #dpad .d-down { left: 44px; top: 88px; }
+  #dpad .d-left { left: 0; top: 44px; }
+  #dpad .d-right { left: 88px; top: 44px; }
+</style>
+</head>
+<body>
+
+<div id="start-screen">
+  <h1>👻 Pac-Man</h1>
+  <p>
+    Sterowanie: strzałki / WASD (na telefonie: krzyżak poniżej planszy).<br>
+    Zbieraj kropki, unikaj duchów. Duże, migające kropki na chwilę odwracają role —
+    wtedy to Ty polujesz na duchy!
+  </p>
+  <button class="btn" id="start-btn" type="button">Start →</button>
+</div>
+
+<div id="game-screen">
+  <div id="hud">
+    <div class="hud-left">
+      <span id="score-label">Wynik: 0</span>
+      <div id="lives"></div>
+    </div>
+    <button type="button" id="restart-btn">Od nowa</button>
+  </div>
+
+  <div id="canvas-wrap">
+    <canvas id="game-canvas" width="456" height="360"></canvas>
+    <div id="message-overlay">
+      <h2 id="message-title"></h2>
+      <p id="message-text"></p>
+      <button class="btn" id="overlay-btn" type="button">Od nowa</button>
+    </div>
+  </div>
+
+  <div id="dpad">
+    <button type="button" class="d-up" data-dir="up" aria-label="Góra">▲</button>
+    <button type="button" class="d-down" data-dir="down" aria-label="Dół">▼</button>
+    <button type="button" class="d-left" data-dir="left" aria-label="Lewo">◀</button>
+    <button type="button" class="d-right" data-dir="right" aria-label="Prawo">▶</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var CELL = 24, COLS = 19, ROWS = 15, TUNNEL_ROW = 7;
+  var CANVAS_W = COLS * CELL, CANVAS_H = ROWS * CELL;
+  var WALL = '#', DOT = '.', POWER = 'o', EMPTY = ' ';
+
+  var PLAYER_SPEED = 88;      // px/sec
+  var GHOST_SPEED = 78;
+  var GHOST_FRIGHT_SPEED = 55;
+  var FRIGHT_MS = 7000;
+  var GHOST_COLORS = ['#e74c3c', '#ff8fd0', '#00cec9'];
+  var GHOST_START = [
+    { col: 8, row: 7 },
+    { col: 9, row: 7 },
+    { col: 10, row: 7 },
+  ];
+  var PLAYER_START = { col: 9, row: 10 };
+  var DIRS = {
+    up: { dx: 0, dy: -1 }, down: { dx: 0, dy: 1 },
+    left: { dx: -1, dy: 0 }, right: { dx: 1, dy: 0 },
+    none: { dx: 0, dy: 0 },
+  };
+
+  function buildMaze() {
+    var g = [];
+    for (var r = 0; r < ROWS; r++) {
+      var row = [];
+      for (var c = 0; c < COLS; c++) row.push(DOT);
+      g.push(row);
+    }
+    for (r = 0; r < ROWS; r++) { g[r][0] = WALL; g[r][COLS - 1] = WALL; }
+    for (var c2 = 0; c2 < COLS; c2++) { g[0][c2] = WALL; g[ROWS - 1][c2] = WALL; }
+    g[TUNNEL_ROW][0] = EMPTY;
+    g[TUNNEL_ROW][COLS - 1] = EMPTY;
+    for (r = 2; r <= 12; r += 2) {
+      for (c2 = 2; c2 <= 16; c2 += 2) g[r][c2] = WALL;
+    }
+    // Ghost house (symmetric around the centre column) with a single door.
+    g[6][8] = WALL; g[6][9] = EMPTY; g[6][10] = WALL;
+    g[7][7] = WALL; g[7][8] = EMPTY; g[7][9] = EMPTY; g[7][10] = EMPTY; g[7][11] = WALL;
+    g[8][8] = WALL; g[8][9] = WALL; g[8][10] = WALL;
+    // Power pellets near the four inner corners.
+    g[1][1] = POWER; g[1][COLS - 2] = POWER;
+    g[ROWS - 2][1] = POWER; g[ROWS - 2][COLS - 2] = POWER;
+    return g;
+  }
+
+  function isWallCell(grid, col, row) {
+    if (row < 0 || row >= ROWS) return true;
+    if (col < 0 || col >= COLS) return row !== TUNNEL_ROW;
+    return grid[row][col] === WALL;
+  }
+
+  function canMoveDir(grid, col, row, dir) {
+    if (!dir || (dir.dx === 0 && dir.dy === 0)) return false;
+    var nc = col + dir.dx, nr = row + dir.dy;
+    if (nr === TUNNEL_ROW && (nc < 0 || nc >= COLS)) return true;
+    if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) return false;
+    return !isWallCell(grid, nc, nr);
+  }
+
+  function bfsNextStep(grid, startCol, startRow, targetCol, targetRow) {
+    if (startCol === targetCol && startRow === targetRow) return DIRS.none;
+    var order = [DIRS.up, DIRS.down, DIRS.left, DIRS.right];
+    var visited = {};
+    visited[startRow * COLS + startCol] = true;
+    var queue = [{ col: startCol, row: startRow, first: null }];
+    var qi = 0;
+    while (qi < queue.length) {
+      var cur = queue[qi++];
+      for (var i = 0; i < order.length; i++) {
+        var d = order[i];
+        var nc = cur.col + d.dx, nr = cur.row + d.dy;
+        if (nr === TUNNEL_ROW) {
+          if (nc < 0) nc = COLS - 1;
+          else if (nc >= COLS) nc = 0;
+        }
+        if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) continue;
+        if (isWallCell(grid, nc, nr)) continue;
+        var key = nr * COLS + nc;
+        if (visited[key]) continue;
+        visited[key] = true;
+        var firstDir = cur.first || d;
+        if (nc === targetCol && nr === targetRow) return firstDir;
+        queue.push({ col: nc, row: nr, first: firstDir });
+      }
+    }
+    return null;
+  }
+
+  function countPellets(grid) {
+    var n = 0;
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        if (grid[r][c] === DOT || grid[r][c] === POWER) n++;
+      }
+    }
+    return n;
+  }
+
+  // ---------- DOM ----------
+
+  var startScreen = document.getElementById('start-screen');
+  var gameScreen = document.getElementById('game-screen');
+  var canvas = document.getElementById('game-canvas');
+  var ctx = canvas.getContext('2d');
+  var scoreLabel = document.getElementById('score-label');
+  var livesEl = document.getElementById('lives');
+  var startBtn = document.getElementById('start-btn');
+  var restartBtn = document.getElementById('restart-btn');
+  var overlay = document.getElementById('message-overlay');
+  var overlayTitle = document.getElementById('message-title');
+  var overlayText = document.getElementById('message-text');
+  var overlayBtn = document.getElementById('overlay-btn');
+
+  var grid, pelletsLeft, score, lives, player, ghosts, phase, phaseTimer, frightTimer, running, lastTime;
+
+  function heartSvg() {
+    return '<svg viewBox="0 0 20 20"><path d="M10 16l-6-5.2C2 8.8 2 5.8 4.4 4.6 6.2 3.7 8.4 4.4 10 6.4c1.6-2 3.8-2.7 5.6-1.8C18 5.8 18 8.8 16 10.8z" fill="#f1c40f"/></svg>';
+  }
+
+  function renderLives() {
+    livesEl.innerHTML = '';
+    for (var i = 0; i < lives; i++) livesEl.innerHTML += heartSvg();
+  }
+
+  function newPlayer() {
+    var c = PLAYER_START.col, r = PLAYER_START.row;
+    return { col: c, row: r, x: c * CELL + CELL / 2, y: r * CELL + CELL / 2, dir: DIRS.none, queuedDir: DIRS.none, mouthT: 0 };
+  }
+
+  function newGhosts() {
+    return GHOST_START.map(function (s, i) {
+      return {
+        col: s.col, row: s.row, x: s.col * CELL + CELL / 2, y: s.row * CELL + CELL / 2,
+        dir: DIRS.up, color: GHOST_COLORS[i], frightened: false, eaten: false,
+        releaseAt: i * 900,
+      };
+    });
+  }
+
+  function resetPositions() {
+    player = newPlayer();
+    ghosts = newGhosts();
+    frightTimer = 0;
+  }
+
+  function showOverlay(title, text, withAction) {
+    overlayTitle.textContent = title;
+    overlayText.textContent = text;
+    overlay.classList.toggle('has-action', !!withAction);
+    overlay.classList.add('is-visible');
+  }
+  function hideOverlay() {
+    overlay.classList.remove('is-visible');
+  }
+
+  function loseLife() {
+    lives -= 1;
+    renderLives();
+    if (lives <= 0) {
+      running = false;
+      phase = 'gameover';
+      showOverlay('Koniec gry', 'Wynik: ' + score + '. Duchy Cię dopadły.', true);
+      return;
+    }
+    phase = 'life-lost';
+    phaseTimer = 1100;
+    resetPositions();
+  }
+
+  function winGame() {
+    running = false;
+    phase = 'win';
+    showOverlay('🎉 Wygrana!', 'Zebrałeś wszystkie kropki! Wynik: ' + score + '.', true);
+  }
+
+  function startRound() {
+    grid = buildMaze();
+    pelletsLeft = countPellets(grid);
+    score = 0;
+    lives = 3;
+    renderLives();
+    scoreLabel.textContent = 'Wynik: 0';
+    resetPositions();
+    phase = 'ready';
+    phaseTimer = 1100;
+    hideOverlay();
+    running = true;
+    lastTime = null;
+    requestAnimationFrame(tick);
+  }
+
+  // ---------- Update ----------
+
+  function stepEntity(e, dt, speed, desiredDir) {
+    var col = Math.floor(e.x / CELL), row = Math.floor(e.y / CELL);
+    var cx = col * CELL + CELL / 2, cy = row * CELL + CELL / 2;
+    var dist = Math.hypot(e.x - cx, e.y - cy);
+    var moveDist = speed * dt;
+    if (dist <= moveDist) {
+      e.x = cx; e.y = cy; e.col = col; e.row = row;
+      if (desiredDir && canMoveDir(grid, col, row, desiredDir)) e.dir = desiredDir;
+      else if (!canMoveDir(grid, col, row, e.dir)) e.dir = DIRS.none;
+      var leftover = moveDist - dist;
+      e.x += e.dir.dx * leftover;
+      e.y += e.dir.dy * leftover;
+    } else {
+      e.x += e.dir.dx * moveDist;
+      e.y += e.dir.dy * moveDist;
+    }
+    if (e.x < -CELL / 2) e.x = CANVAS_W + CELL / 2 - 1;
+    else if (e.x > CANVAS_W + CELL / 2) e.x = -CELL / 2 + 1;
+  }
+
+  function updatePlayer(dt) {
+    stepEntity(player, dt, PLAYER_SPEED, player.queuedDir);
+    player.mouthT += dt;
+
+    var col = Math.round((player.x - CELL / 2) / CELL);
+    var row = Math.round((player.y - CELL / 2) / CELL);
+    if (row >= 0 && row < ROWS && col >= 0 && col < COLS) {
+      var cell = grid[row][col];
+      if (cell === DOT) {
+        grid[row][col] = EMPTY;
+        score += 10;
+        pelletsLeft -= 1;
+        scoreLabel.textContent = 'Wynik: ' + score;
+        if (pelletsLeft <= 0) { winGame(); return; }
+      } else if (cell === POWER) {
+        grid[row][col] = EMPTY;
+        score += 50;
+        pelletsLeft -= 1;
+        scoreLabel.textContent = 'Wynik: ' + score;
+        frightTimer = FRIGHT_MS;
+        ghosts.forEach(function (g) { if (!g.eaten) g.frightened = true; });
+        if (pelletsLeft <= 0) { winGame(); return; }
+      }
+    }
+  }
+
+  function ghostDesiredDir(g) {
+    if (g.eaten) {
+      return bfsNextStep(grid, g.col, g.row, GHOST_START[1].col, GHOST_START[1].row) || g.dir;
+    }
+    if (g.frightened) {
+      var opts = [DIRS.up, DIRS.down, DIRS.left, DIRS.right].filter(function (d) {
+        if (d.dx === -g.dir.dx && d.dy === -g.dir.dy) return false; // avoid reversing
+        return canMoveDir(grid, g.col, g.row, d);
+      });
+      if (!opts.length) opts = [DIRS.up, DIRS.down, DIRS.left, DIRS.right].filter(function (d) { return canMoveDir(grid, g.col, g.row, d); });
+      return opts.length ? opts[Math.floor(Math.random() * opts.length)] : g.dir;
+    }
+    var playerCol = Math.round((player.x - CELL / 2) / CELL);
+    var playerRow = Math.round((player.y - CELL / 2) / CELL);
+    return bfsNextStep(grid, g.col, g.row, playerCol, playerRow) || g.dir;
+  }
+
+  function updateGhosts(dt, elapsedMs) {
+    ghosts.forEach(function (g) {
+      if (elapsedMs < g.releaseAt) return; // still waiting in the house
+      if (g.eaten && g.col === GHOST_START[1].col && g.row === GHOST_START[1].row) {
+        g.eaten = false;
+        g.frightened = false;
+      }
+      var speed = g.eaten ? GHOST_SPEED * 1.6 : (g.frightened ? GHOST_FRIGHT_SPEED : GHOST_SPEED);
+      stepEntity(g, dt, speed, ghostDesiredDir(g));
+    });
+  }
+
+  function checkCollisions() {
+    ghosts.forEach(function (g) {
+      if (g.eaten) return;
+      var d = Math.hypot(player.x - g.x, player.y - g.y);
+      if (d < CELL * 0.55) {
+        if (g.frightened) {
+          g.eaten = true;
+          g.frightened = false;
+          score += 200;
+          scoreLabel.textContent = 'Wynik: ' + score;
+        } else {
+          loseLife();
+        }
+      }
+    });
+  }
+
+  function update(dt, ts) {
+    if (phase === 'ready' || phase === 'life-lost') {
+      phaseTimer -= dt * 1000;
+      if (phaseTimer <= 0) phase = 'playing';
+      return;
+    }
+    if (phase !== 'playing') return;
+
+    if (frightTimer > 0) {
+      frightTimer -= dt * 1000;
+      if (frightTimer <= 0) {
+        frightTimer = 0;
+        ghosts.forEach(function (g) { g.frightened = false; });
+      }
+    }
+
+    updatePlayer(dt);
+    if (phase !== 'playing') return;
+    updateGhosts(dt, ts - roundStartTs);
+    checkCollisions();
+  }
+
+  // ---------- Draw ----------
+
+  function fillRoundedRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.arcTo(x + w, y, x + w, y + r, r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+    ctx.lineTo(x + r, y + h);
+    ctx.arcTo(x, y + h, x, y + h - r, r);
+    ctx.lineTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawMaze() {
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        var cell = grid[r][c];
+        var x = c * CELL, y = r * CELL;
+        if (cell === WALL) {
+          ctx.fillStyle = '#2c3ea3';
+          fillRoundedRect(x + 1.5, y + 1.5, CELL - 3, CELL - 3, 5);
+        } else if (cell === DOT) {
+          ctx.fillStyle = '#f5d59a';
+          ctx.beginPath();
+          ctx.arc(x + CELL / 2, y + CELL / 2, 2.4, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (cell === POWER) {
+          var pulse = 3.5 + Math.sin(performance.now() / 150) * 1.4;
+          ctx.fillStyle = '#f5d59a';
+          ctx.beginPath();
+          ctx.arc(x + CELL / 2, y + CELL / 2, pulse, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+  }
+
+  function dirAngle(dir) {
+    if (dir === DIRS.right) return 0;
+    if (dir === DIRS.down) return Math.PI / 2;
+    if (dir === DIRS.left) return Math.PI;
+    if (dir === DIRS.up) return -Math.PI / 2;
+    return 0;
+  }
+
+  function drawPlayer() {
+    var r = CELL * 0.42;
+    var moving = player.dir !== DIRS.none;
+    var mouth = moving ? (Math.abs(Math.sin(player.mouthT * 9)) * 0.45 + 0.06) : 0.06;
+    var angle = dirAngle(player.dir === DIRS.none ? (player.lastDir || DIRS.right) : (player.lastDir = player.dir));
+    ctx.fillStyle = '#f1c40f';
+    ctx.beginPath();
+    ctx.moveTo(player.x, player.y);
+    ctx.arc(player.x, player.y, r, angle + mouth, angle - mouth + Math.PI * 2);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawGhost(g) {
+    var r = CELL * 0.42;
+    var x = g.x, y = g.y;
+    var blinking = g.frightened && frightTimer < 2000 && Math.floor(performance.now() / 200) % 2 === 0;
+    var bodyColor = g.eaten ? 'rgba(255,255,255,0.35)' : (g.frightened ? (blinking ? '#dfe6e9' : '#3742fa') : g.color);
+
+    if (!g.eaten) {
+      ctx.fillStyle = bodyColor;
+      ctx.beginPath();
+      ctx.arc(x, y - r * 0.1, r, Math.PI, 0, false);
+      ctx.lineTo(x + r, y + r * 0.7);
+      var bumps = 4;
+      for (var i = 0; i < bumps; i++) {
+        var bx1 = x + r - (i * 2 * r) / bumps;
+        var bx2 = x + r - ((i + 0.5) * 2 * r) / bumps;
+        var by = i % 2 === 0 ? y + r * 0.95 : y + r * 0.65;
+        ctx.quadraticCurveTo(bx2, by, bx1 - (r / bumps), y + r * 0.7);
+      }
+      ctx.lineTo(x - r, y + r * 0.7);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    var eyeDx = g.dir.dx, eyeDy = g.dir.dy;
+    var eyeOffX = r * 0.32, eyeOffY = -r * 0.08;
+    [-1, 1].forEach(function (side) {
+      var ex = x + side * eyeOffX, ey = y + eyeOffY;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(ex, ey, r * 0.24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = g.frightened && !blinking ? '#3742fa' : '#0a0c14';
+      ctx.beginPath();
+      ctx.arc(ex + eyeDx * r * 0.1, ey + eyeDy * r * 0.1, r * 0.11, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+    drawMaze();
+    ghosts.forEach(drawGhost);
+    drawPlayer();
+  }
+
+  var roundStartTs = 0;
+
+  function tick(ts) {
+    if (!running) return;
+    if (lastTime === null) { lastTime = ts; roundStartTs = ts; }
+    var dt = Math.min((ts - lastTime) / 1000, 0.05);
+    lastTime = ts;
+    update(dt, ts);
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  // ---------- Input ----------
+
+  function setQueuedDir(dir) {
+    if (player) player.queuedDir = dir;
+  }
+
+  document.addEventListener('keydown', function (e) {
+    var k = e.key.toLowerCase();
+    if (k === 'arrowup' || k === 'w') { setQueuedDir(DIRS.up); e.preventDefault(); }
+    else if (k === 'arrowdown' || k === 's') { setQueuedDir(DIRS.down); e.preventDefault(); }
+    else if (k === 'arrowleft' || k === 'a') { setQueuedDir(DIRS.left); e.preventDefault(); }
+    else if (k === 'arrowright' || k === 'd') { setQueuedDir(DIRS.right); e.preventDefault(); }
+  });
+
+  document.querySelectorAll('#dpad button').forEach(function (btn) {
+    var dir = DIRS[btn.dataset.dir];
+    var press = function (e) { e.preventDefault(); btn.classList.add('is-active'); setQueuedDir(dir); };
+    var release = function () { btn.classList.remove('is-active'); };
+    btn.addEventListener('pointerdown', press);
+    btn.addEventListener('pointerup', release);
+    btn.addEventListener('pointerleave', release);
+    btn.addEventListener('pointercancel', release);
+  });
+
+  startBtn.addEventListener('click', function () {
+    startScreen.classList.add('is-hidden');
+    gameScreen.classList.add('is-active');
+    startRound();
+  });
+  restartBtn.addEventListener('click', function () {
+    running = false;
+    startRound();
+  });
+  overlayBtn.addEventListener('click', function () {
+    running = false;
+    startRound();
+  });
+})();
+</script>
+</body>
+</html>
