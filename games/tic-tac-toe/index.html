@@ -164,26 +164,37 @@
     return out;
   }
 
-  function minimax(b, mark) {
+  // Score-only recursion (no move tie-breaking here — the score of a state doesn't
+  // depend on which of several equally-good moves gets picked).
+  function minimaxScore(b, mark) {
     var result = checkResult(b);
     if (result) {
-      if (result.winner === 'draw') return { score: 0 };
-      return { score: result.winner === 'O' ? 10 : -10 };
+      if (result.winner === 'draw') return 0;
+      return result.winner === 'O' ? 10 : -10;
     }
-    var moves = emptyIndices(b);
-    var best = null;
-    var bestScore = mark === 'O' ? -Infinity : Infinity;
-    moves.forEach(function (i) {
+    var scores = emptyIndices(b).map(function (i) {
       b[i] = mark;
-      var s = minimax(b, mark === 'O' ? 'X' : 'O').score;
+      var s = minimaxScore(b, mark === 'O' ? 'X' : 'O');
       b[i] = null;
-      s -= mark === 'O' ? 0 : 0; // depth-neutral; small board, no need to prefer faster wins strictly
-      if (mark === 'O' ? s > bestScore : s < bestScore) {
-        bestScore = s;
-        best = i;
-      }
+      return s;
     });
-    return { score: bestScore, move: best };
+    return mark === 'O' ? Math.max.apply(null, scores) : Math.min.apply(null, scores);
+  }
+
+  // Every move tied for the best score, so the bot doesn't always answer the same
+  // board with the same move — it stays unbeatable but no longer plays every game
+  // identically.
+  function bestMoves(b, mark) {
+    var scored = emptyIndices(b).map(function (i) {
+      b[i] = mark;
+      var s = minimaxScore(b, mark === 'O' ? 'X' : 'O');
+      b[i] = null;
+      return { i: i, s: s };
+    });
+    var bestScore = mark === 'O'
+      ? Math.max.apply(null, scored.map(function (x) { return x.s; }))
+      : Math.min.apply(null, scored.map(function (x) { return x.s; }));
+    return scored.filter(function (x) { return x.s === bestScore; }).map(function (x) { return x.i; });
   }
 
   function botMove() {
@@ -195,7 +206,8 @@
       var openings = [0, 2, 4, 6, 8];
       choice = openings[Math.floor(Math.random() * openings.length)];
     } else {
-      choice = minimax(board.slice(), 'O').move;
+      var candidates = bestMoves(board.slice(), 'O');
+      choice = candidates[Math.floor(Math.random() * candidates.length)];
     }
     place(choice, 'O');
     var result = checkResult(board);
