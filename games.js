@@ -22,7 +22,9 @@ export async function getGameById(id) {
   return snap.exists() ? Object.assign({ id: snap.id }, snap.data()) : null;
 }
 
-export async function addGame({ title, scratchUrl, scratchAuthor }) {
+const CATEGORIES = ['platformowa', 'zrecznosciowa', 'logiczna', 'wyscigi', 'strzelanka', 'sportowa', 'muzyczna', 'przygodowa', 'inne'];
+
+export async function addGame({ title, scratchUrl, scratchAuthor, category }) {
   if (!title || !scratchUrl || !scratchAuthor) {
     throw new Error('Uzupełnij wszystkie pola.');
   }
@@ -39,6 +41,7 @@ export async function addGame({ title, scratchUrl, scratchAuthor }) {
     title: title.trim(),
     scratchProjectId: projectId,
     scratchAuthor: scratchAuthor.trim(),
+    category: CATEGORIES.includes(category) ? category : 'inne',
     addedBy: currentUser,
     addedAt: new Date().toISOString(),
   };

@@ -40,6 +40,41 @@
         </div>
       </section>
 
+      <section class="filters-bar">
+        <label class="filter-field">
+          Kategoria
+          <select id="filter-category">
+            <option value="">Wszystkie</option>
+            <option value="platformowa">Platformowa</option>
+            <option value="zrecznosciowa">Zręcznościowa</option>
+            <option value="logiczna">Logiczna / Puzzle</option>
+            <option value="wyscigi">Wyścigi</option>
+            <option value="strzelanka">Strzelanka</option>
+            <option value="sportowa">Sportowa</option>
+            <option value="muzyczna">Muzyczna</option>
+            <option value="przygodowa">Przygodowa</option>
+            <option value="inne">Inne</option>
+          </select>
+        </label>
+        <label class="filter-field">
+          Pochodzenie
+          <select id="filter-origin">
+            <option value="">Wszystkie</option>
+            <option value="claude">Oryginalne (od Claude)</option>
+            <option value="players">Od graczy</option>
+          </select>
+        </label>
+        <label class="filter-field">
+          Sortowanie
+          <select id="filter-sort">
+            <option value="date-desc">Najnowsze</option>
+            <option value="date-asc">Najstarsze</option>
+            <option value="alpha-asc">Alfabetycznie (A-Z)</option>
+            <option value="alpha-desc">Alfabetycznie (Z-A)</option>
+          </select>
+        </label>
+      </section>
+
       <p class="settings-hint" id="no-results" hidden>Brak gier pasujących do wyszukiwania.</p>
 
       <section class="game-grid" id="game-grid"></section>
@@ -116,6 +151,19 @@
             </label>
             <label>Nazwa użytkownika Scratch autora gry
               <input type="text" name="scratchAuthor" required>
+            </label>
+            <label>Kategoria
+              <select name="category">
+                <option value="platformowa">Platformowa</option>
+                <option value="zrecznosciowa">Zręcznościowa</option>
+                <option value="logiczna">Logiczna / Puzzle</option>
+                <option value="wyscigi">Wyścigi</option>
+                <option value="strzelanka">Strzelanka</option>
+                <option value="sportowa">Sportowa</option>
+                <option value="muzyczna">Muzyczna</option>
+                <option value="przygodowa">Przygodowa</option>
+                <option value="inne" selected>Inne</option>
+              </select>
             </label>
             <button type="submit" class="btn btn--accent">Dodaj grę</button>
           </form>

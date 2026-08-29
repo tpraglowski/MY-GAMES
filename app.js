@@ -10,6 +10,21 @@ import {
 } from './auth.js';
 import { getGames, getGameById, addGame, deleteGame } from './games.js';
 
+const CATEGORY_LABELS = {
+  platformowa: 'Platformowa',
+  zrecznosciowa: 'Zręcznościowa',
+  logiczna: 'Logiczna / Puzzle',
+  wyscigi: 'Wyścigi',
+  strzelanka: 'Strzelanka',
+  sportowa: 'Sportowa',
+  muzyczna: 'Muzyczna',
+  przygodowa: 'Przygodowa',
+  inne: 'Inne',
+};
+function categoryLabel(game) {
+  return CATEGORY_LABELS[game.category] || CATEGORY_LABELS.inne;
+}
+
 const VIEWS = ['games', 'login', 'settings', 'add-game', 'play', 'admin'];
 const TITLES = {
   games: 'My Games',
@@ -70,6 +85,9 @@ async function initGamesView() {
   if (!grid) return;
 
   const searchInput = document.getElementById('game-search');
+  const categorySelect = document.getElementById('filter-category');
+  const originSelect = document.getElementById('filter-origin');
+  const sortSelect = document.getElementById('filter-sort');
   const noResults = document.getElementById('no-results');
   const allGames = await getGames();
   const DAY_MS = 24 * 60 * 60 * 1000;
@@ -102,6 +120,10 @@ async function initGamesView() {
       title.className = 'game-card__title';
       title.textContent = game.title;
 
+      const categoryTag = document.createElement('div');
+      categoryTag.className = 'game-card__category';
+      categoryTag.textContent = categoryLabel(game);
+
       const meta = document.createElement('div');
       meta.className = 'game-card__meta';
       meta.textContent = game.type ? 'Autor: ' + (game.author || game.addedBy) : 'Scratch: ' + game.scratchAuthor;
@@ -110,7 +132,7 @@ async function initGamesView() {
       addedBy.className = 'game-card__meta game-card__added-by';
       addedBy.textContent = '@' + game.addedBy;
 
-      card.append(icon, title, meta, addedBy);
+      card.append(icon, title, categoryTag, meta, addedBy);
       grid.appendChild(card);
     });
 
@@ -123,24 +145,57 @@ async function initGamesView() {
     grid.appendChild(addCard);
   }
 
-  function filterGames(query) {
-    const q = query.trim().toLowerCase();
-    if (!q) return allGames;
-    return allGames.filter((game) => {
-      const authorText = (game.scratchAuthor || game.author || '').toLowerCase();
-      return (
-        game.title.toLowerCase().includes(q) ||
-        authorText.includes(q) ||
-        game.addedBy.toLowerCase().includes(q)
-      );
+  function applyFilters() {
+    const q = (searchInput ? searchInput.value : '').trim().toLowerCase();
+    const category = categorySelect ? categorySelect.value : '';
+    const origin = originSelect ? originSelect.value : '';
+    const sort = sortSelect ? sortSelect.value : 'date-desc';
+
+    const filtered = allGames.filter((game) => {
+      if (q) {
+        const authorText = (game.scratchAuthor || game.author || '').toLowerCase();
+        const matches =
+          game.title.toLowerCase().includes(q) ||
+          authorText.includes(q) ||
+          game.addedBy.toLowerCase().includes(q);
+        if (!matches) return false;
+      }
+
+      if (category && (game.category || 'inne') !== category) return false;
+
+      if (origin) {
+        const isClaude = (game.addedBy || '').toLowerCase() === 'claude';
+        if (origin === 'claude' && !isClaude) return false;
+        if (origin === 'players' && isClaude) return false;
+      }
+
+      return true;
     });
+
+    filtered.sort((a, b) => {
+      if (sort === 'alpha-asc') return a.title.localeCompare(b.title, 'pl');
+      if (sort === 'alpha-desc') return b.title.localeCompare(a.title, 'pl');
+      const aTime = a.addedAt ? new Date(a.addedAt).getTime() : 0;
+      const bTime = b.addedAt ? new Date(b.addedAt).getTime() : 0;
+      return sort === 'date-asc' ? aTime - bTime : bTime - aTime;
+    });
+
+    return filtered;
   }
 
-  renderGames(allGames);
+  function refresh() {
+    renderGames(applyFilters());
+  }
+
   if (searchInput) {
     searchInput.value = '';
-    searchInput.oninput = () => renderGames(filterGames(searchInput.value));
+    searchInput.oninput = refresh;
   }
+  if (categorySelect) categorySelect.onchange = refresh;
+  if (originSelect) originSelect.onchange = refresh;
+  if (sortSelect) sortSelect.onchange = refresh;
+
+  refresh();
 }
 
 // ---------- Login / register ----------
@@ -211,6 +266,7 @@ function initAddGameView() {
         title: data.get('title'),
         scratchUrl: data.get('scratchUrl'),
         scratchAuthor: data.get('scratchAuthor'),
+        category: data.get('category'),
       });
       location.hash = '/play/' + encodeURIComponent(game.id);
     } catch (err) {
@@ -245,8 +301,8 @@ async function initPlayView(gameId) {
   const metaEl = document.createElement('p');
   metaEl.className = 'play-meta';
   metaEl.textContent = isNative
-    ? 'Autor: ' + (game.author || game.addedBy) + ' · Dodał: @' + game.addedBy
-    : 'Autor na Scratchu: ' + game.scratchAuthor + ' · Dodał: @' + game.addedBy;
+    ? 'Kategoria: ' + categoryLabel(game) + ' · Autor: ' + (game.author || game.addedBy) + ' · Dodał: @' + game.addedBy
+    : 'Kategoria: ' + categoryLabel(game) + ' · Autor na Scratchu: ' + game.scratchAuthor + ' · Dodał: @' + game.addedBy;
 
   const frameWrap = document.createElement('div');
   frameWrap.className = 'scratch-embed' + (isNative ? ' scratch-embed--native' : '');
