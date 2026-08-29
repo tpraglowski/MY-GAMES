@@ -528,6 +528,12 @@ main {
   border-bottom: none;
 }
 
+.account-row--claude {
+  border-left: 3px solid #f1c40f;
+  padding-left: 0.6rem;
+  background: rgba(241, 196, 15, 0.08);
+}
+
 .account-row__name {
   flex: 1;
   font-weight: 600;

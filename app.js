@@ -312,14 +312,20 @@ async function initAdminView() {
     listEl.innerHTML = '';
     accounts
       .slice()
-      .sort((a, b) => a.username.localeCompare(b.username))
+      .sort((a, b) => {
+        const aClaude = a.id === 'claude';
+        const bClaude = b.id === 'claude';
+        if (aClaude !== bClaude) return aClaude ? -1 : 1;
+        return a.username.localeCompare(b.username);
+      })
       .forEach((acc) => {
         const isHardcodedAdmin = acc.id === HARDCODED_ADMIN;
         const isAdminAcc = isHardcodedAdmin || acc.admin === true;
         const isSelf = acc.id === myUsername;
+        const isClaude = acc.id === 'claude';
 
         const row = document.createElement('div');
-        row.className = 'account-row';
+        row.className = 'account-row' + (isClaude ? ' account-row--claude' : '');
 
         const name = document.createElement('span');
         name.className = 'account-row__name';
