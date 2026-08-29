@@ -157,6 +157,21 @@ export function renderAccountWidget() {
 }
 
 export async function refreshHeader() {
+  // A logged-in session (mg_session in localStorage) can outlive the anonymous
+  // Firebase Auth session it was created under — e.g. cleared site data, a new
+  // device, or Firebase just rotating the anonymous uid. When that happens the
+  // uidAccount/{uid} → accountId mapping used by Firestore rules (isMe/isAdmin)
+  // is missing for the *current* uid, so every write (delete account, delete
+  // game, grant admin, ...) silently fails with "Missing or insufficient
+  // permissions" even though the UI still shows the user as logged in — reads
+  // don't need that mapping, so the page looks fine right up until you click
+  // something. Re-establish the mapping for the current uid on every load.
+  const current = getCurrentUser();
+  if (current) {
+    await authReady;
+    rememberAuthUid(current);
+  }
+
   renderAccountWidget();
 
   const nav = document.getElementById('site-nav');

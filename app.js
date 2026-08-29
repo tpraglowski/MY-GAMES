@@ -285,8 +285,13 @@ async function initPlayView(gameId) {
     deleteBtn.addEventListener('click', async () => {
       if (!confirm('Na pewno usunąć grę „' + game.title + '”?')) return;
       deleteBtn.disabled = true;
-      await deleteGame(gameId);
-      location.hash = '/';
+      try {
+        await deleteGame(gameId);
+        location.hash = '/';
+      } catch (err) {
+        alert('Nie udało się usunąć gry: ' + err.message);
+        deleteBtn.disabled = false;
+      }
     });
     actions.append(deleteBtn);
   }
@@ -333,9 +338,14 @@ async function initAdminView() {
           toggleBtn.textContent = isAdminAcc ? 'Odbierz administratora' : 'Nadaj administratora';
           toggleBtn.addEventListener('click', async () => {
             toggleBtn.disabled = true;
-            await setAccountAdmin(acc.id, !isAdminAcc);
-            acc.admin = !isAdminAcc;
-            renderAccounts(accounts);
+            try {
+              await setAccountAdmin(acc.id, !isAdminAcc);
+              acc.admin = !isAdminAcc;
+              renderAccounts(accounts);
+            } catch (err) {
+              alert('Nie udało się zmienić uprawnień: ' + err.message);
+              toggleBtn.disabled = false;
+            }
           });
           row.append(toggleBtn);
         }
@@ -348,10 +358,15 @@ async function initAdminView() {
           deleteBtn.addEventListener('click', async () => {
             if (!confirm('Na pewno usunąć konto „' + acc.username + '”?')) return;
             deleteBtn.disabled = true;
-            await deleteAccount(acc.id);
-            const idx = accounts.indexOf(acc);
-            if (idx !== -1) accounts.splice(idx, 1);
-            renderAccounts(accounts);
+            try {
+              await deleteAccount(acc.id);
+              const idx = accounts.indexOf(acc);
+              if (idx !== -1) accounts.splice(idx, 1);
+              renderAccounts(accounts);
+            } catch (err) {
+              alert('Nie udało się usunąć konta: ' + err.message);
+              deleteBtn.disabled = false;
+            }
           });
           row.append(deleteBtn);
         }
