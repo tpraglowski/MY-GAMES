@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Kółko i krzyżyk</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; overscroll-behavior: none; }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #1a1d29; color: #f0f0f5; padding: 1rem; gap: 1.2rem; }
+
+  h1 { margin: 0; font-size: 1.3rem; text-align: center; }
+
+  .screen { display: none; flex-direction: column; align-items: center; gap: 1rem; width: 100%; max-width: 360px; }
+  .screen.is-active { display: flex; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.7rem 1.3rem; border-radius: 10px; border: none; font-size: 0.95rem; font-weight: 600; cursor: pointer; background: #6c5ce7; color: #fff; width: 100%; }
+  .btn:active { transform: scale(0.98); }
+  .btn--ghost { background: transparent; border: 1px solid #2a2e3f; color: #f0f0f5; }
+  .btn-row { display: flex; flex-direction: column; gap: 0.7rem; width: 100%; }
+
+  .mode-hint { color: #9a9db0; font-size: 0.8rem; text-align: center; margin: -0.4rem 0 0; }
+
+  #status { font-size: 1rem; font-weight: 600; text-align: center; min-height: 1.4em; }
+  #status .mark-x { color: #6c5ce7; }
+  #status .mark-o { color: #e84393; }
+
+  #board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; width: 100%; max-width: 300px; aspect-ratio: 1; }
+  .cell { background: #232838; border: none; border-radius: 10px; font-size: 2.6rem; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #f0f0f5; line-height: 1; padding: 0; transition: background 0.15s ease; }
+  .cell:not(:disabled):hover { background: #2a2e3f; }
+  .cell:disabled { cursor: default; }
+  .cell.mark-x { color: #6c5ce7; }
+  .cell.mark-o { color: #e84393; }
+  .cell.is-win { background: rgba(46, 204, 113, 0.22); }
+
+  .below-board { display: flex; flex-direction: column; gap: 0.6rem; width: 100%; max-width: 300px; }
+</style>
+</head>
+<body>
+
+<h1>Kółko i krzyżyk</h1>
+
+<section id="screen-mode" class="screen is-active">
+  <p class="mode-hint">Wybierz tryb gry</p>
+  <div class="btn-row">
+    <button type="button" class="btn" id="mode-bot">🤖 Gra z botem (1 gracz)</button>
+    <button type="button" class="btn" id="mode-two">🧑‍🤝‍🧑 Dwóch graczy</button>
+  </div>
+</section>
+
+<section id="screen-game" class="screen">
+  <p id="status"></p>
+  <div id="board"></div>
+  <div class="below-board">
+    <button type="button" class="btn btn--ghost" id="restart-btn">Nowa gra</button>
+    <button type="button" class="btn btn--ghost" id="change-mode-btn">← Zmień tryb</button>
+  </div>
+</section>
+
+<script>
+(function () {
+  var WIN_LINES = [
+    [0,1,2], [3,4,5], [6,7,8],
+    [0,3,6], [1,4,7], [2,5,8],
+    [0,4,8], [2,4,6],
+  ];
+
+  var screenMode = document.getElementById('screen-mode');
+  var screenGame = document.getElementById('screen-game');
+  var boardEl = document.getElementById('board');
+  var statusEl = document.getElementById('status');
+  var restartBtn = document.getElementById('restart-btn');
+  var changeModeBtn = document.getElementById('change-mode-btn');
+
+  var mode = null; // 'bot' | 'two'
+  var board = [];
+  var current = 'X';
+  var over = false;
+  var cells = [];
+
+  function markLabel(mark) {
+    return '<span class="mark-' + mark.toLowerCase() + '">' + (mark === 'X' ? '✕' : '◯') + '</span>';
+  }
+
+  function buildBoard() {
+    boardEl.innerHTML = '';
+    cells = [];
+    for (var i = 0; i < 9; i++) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cell';
+      btn.dataset.index = i;
+      btn.addEventListener('click', onCellClick);
+      boardEl.appendChild(btn);
+      cells.push(btn);
+    }
+  }
+
+  function checkResult(b) {
+    for (var i = 0; i < WIN_LINES.length; i++) {
+      var line = WIN_LINES[i];
+      var a = b[line[0]], c = b[line[1]], d = b[line[2]];
+      if (a && a === c && a === d) return { winner: a, line: line };
+    }
+    if (b.every(function (v) { return v; })) return { winner: 'draw', line: null };
+    return null;
+  }
+
+  function updateStatus() {
+    if (over) return;
+    if (mode === 'bot') {
+      statusEl.innerHTML = current === 'X' ? 'Twoja kolej — ' + markLabel('X') : 'Bot myśli' + markLabel('O') + '…';
+    } else {
+      statusEl.innerHTML = 'Teraz gra: ' + markLabel(current);
+    }
+  }
+
+  function endGame(result) {
+    over = true;
+    cells.forEach(function (btn) { btn.disabled = true; });
+    if (result.winner === 'draw') {
+      statusEl.textContent = 'Remis!';
+    } else if (mode === 'bot') {
+      statusEl.innerHTML = result.winner === 'X' ? 'Wygrałeś! 🎉' : 'Bot wygrywa. Spróbuj ponownie!';
+    } else {
+      statusEl.innerHTML = 'Wygrywa: ' + markLabel(result.winner) + ' 🎉';
+    }
+    if (result.line) {
+      result.line.forEach(function (i) { cells[i].classList.add('is-win'); });
+    }
+  }
+
+  function place(index, mark) {
+    board[index] = mark;
+    var btn = cells[index];
+    btn.innerHTML = markLabel(mark);
+    btn.classList.add('mark-' + mark.toLowerCase());
+    btn.disabled = true;
+  }
+
+  function onCellClick(e) {
+    if (over) return;
+    if (mode === 'bot' && current !== 'X') return;
+    var index = Number(e.currentTarget.dataset.index);
+    if (board[index]) return;
+
+    place(index, current);
+    var result = checkResult(board);
+    if (result) { endGame(result); return; }
+
+    current = current === 'X' ? 'O' : 'X';
+    updateStatus();
+
+    if (mode === 'bot' && current === 'O') {
+      setTimeout(botMove, 450);
+    }
+  }
+
+  // ---------- Bot (minimax, unbeatable) ----------
+
+  function emptyIndices(b) {
+    var out = [];
+    for (var i = 0; i < 9; i++) if (!b[i]) out.push(i);
+    return out;
+  }
+
+  function minimax(b, mark) {
+    var result = checkResult(b);
+    if (result) {
+      if (result.winner === 'draw') return { score: 0 };
+      return { score: result.winner === 'O' ? 10 : -10 };
+    }
+    var moves = emptyIndices(b);
+    var best = null;
+    var bestScore = mark === 'O' ? -Infinity : Infinity;
+    moves.forEach(function (i) {
+      b[i] = mark;
+      var s = minimax(b, mark === 'O' ? 'X' : 'O').score;
+      b[i] = null;
+      s -= mark === 'O' ? 0 : 0; // depth-neutral; small board, no need to prefer faster wins strictly
+      if (mark === 'O' ? s > bestScore : s < bestScore) {
+        bestScore = s;
+        best = i;
+      }
+    });
+    return { score: bestScore, move: best };
+  }
+
+  function botMove() {
+    if (over) return;
+    var moves = emptyIndices(board);
+    var choice;
+    if (moves.length === 9) {
+      // First move of the game — pick a strong opening at random to avoid always the same reply.
+      var openings = [0, 2, 4, 6, 8];
+      choice = openings[Math.floor(Math.random() * openings.length)];
+    } else {
+      choice = minimax(board.slice(), 'O').move;
+    }
+    place(choice, 'O');
+    var result = checkResult(board);
+    if (result) { endGame(result); return; }
+    current = 'X';
+    updateStatus();
+  }
+
+  // ---------- Screens ----------
+
+  function startGame(selectedMode) {
+    mode = selectedMode;
+    board = new Array(9).fill(null);
+    current = 'X';
+    over = false;
+    buildBoard();
+    updateStatus();
+    screenMode.classList.remove('is-active');
+    screenGame.classList.add('is-active');
+  }
+
+  document.getElementById('mode-bot').addEventListener('click', function () { startGame('bot'); });
+  document.getElementById('mode-two').addEventListener('click', function () { startGame('two'); });
+  restartBtn.addEventListener('click', function () { startGame(mode); });
+  changeModeBtn.addEventListener('click', function () {
+    screenGame.classList.remove('is-active');
+    screenMode.classList.add('is-active');
+  });
+})();
+</script>
+</body>
+</html>
