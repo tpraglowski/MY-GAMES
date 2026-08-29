@@ -304,11 +304,19 @@
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = '#e74c3c';
+    ctx.fillStyle = '#000000';
     ctx.fillRect(player.x, player.y, PLAYER_W, PLAYER_H);
-    ctx.fillStyle = '#1a1d29';
-    ctx.fillRect(player.x + 4, player.y + 6, 4, 4);
-    ctx.fillRect(player.x + PLAYER_W - 8, player.y + 6, 4, 4);
+
+    var eyeCx = player.x + PLAYER_W / 2;
+    var eyeCy = player.y + PLAYER_H * 0.4;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(eyeCx, eyeCy, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.arc(eyeCx, eyeCy, 2, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   function tick(ts) {
