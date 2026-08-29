@@ -74,7 +74,7 @@
 (function () {
   var CANVAS_W = 480, CANVAS_H = 360;
   var GRAVITY = 1400, JUMP_VELOCITY = -480, MOVE_SPEED = 190;
-  var PLAYER_W = 22, PLAYER_H = 30;
+  var PLAYER_W = 26, PLAYER_H = 26;
 
   var LEVELS = [
     {
@@ -159,6 +159,21 @@
 
   function rectsOverlap(a, b) {
     return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  }
+
+  function fillRoundedRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.arcTo(x + w, y, x + w, y + r, r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+    ctx.lineTo(x + r, y + h);
+    ctx.arcTo(x, y + h, x, y + h - r, r);
+    ctx.lineTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.closePath();
+    ctx.fill();
   }
 
   function loadLevel(index) {
@@ -305,7 +320,7 @@
     ctx.fill();
 
     ctx.fillStyle = '#000000';
-    ctx.fillRect(player.x, player.y, PLAYER_W, PLAYER_H);
+    fillRoundedRect(ctx, player.x, player.y, PLAYER_W, PLAYER_H, 6);
 
     var eyeCx = player.x + PLAYER_W / 2;
     var eyeCy = player.y + PLAYER_H * 0.4;
