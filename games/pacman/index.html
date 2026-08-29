@@ -65,7 +65,7 @@
   </div>
 
   <div id="canvas-wrap">
-    <canvas id="game-canvas" width="456" height="360"></canvas>
+    <canvas id="game-canvas" width="504" height="408"></canvas>
     <div id="message-overlay">
       <h2 id="message-title"></h2>
       <p id="message-text"></p>
@@ -83,9 +83,10 @@
 
 <script>
 (function () {
-  var CELL = 24, COLS = 19, ROWS = 15, TUNNEL_ROW = 7;
+  var CELL = 24, COLS = 21, ROWS = 17, TUNNEL_ROW = 8;
   var CANVAS_W = COLS * CELL, CANVAS_H = ROWS * CELL;
   var WALL = '#', DOT = '.', POWER = 'o', EMPTY = ' ';
+  var CENTER_COL = 10; // (COLS-1)/2 — every wall placed below mirrors around this column
 
   var PLAYER_SPEED = 88;      // px/sec
   var GHOST_SPEED = 78;
@@ -93,17 +94,27 @@
   var FRIGHT_MS = 7000;
   var GHOST_COLORS = ['#e74c3c', '#ff8fd0', '#00cec9'];
   var GHOST_START = [
-    { col: 8, row: 7 },
-    { col: 9, row: 7 },
-    { col: 10, row: 7 },
+    { col: 9, row: 6 },
+    { col: 10, row: 6 },
+    { col: 11, row: 6 },
   ];
-  var PLAYER_START = { col: 9, row: 10 };
+  var PLAYER_START = { col: 10, row: 12 };
   var DIRS = {
     up: { dx: 0, dy: -1 }, down: { dx: 0, dy: 1 },
     left: { dx: -1, dy: 0 }, right: { dx: 1, dy: 0 },
     none: { dx: 0, dy: 0 },
   };
 
+  // The ghost-house door + interior — off-limits to the player (ghosts-only),
+  // which also removes the one spot that would otherwise be a dead end.
+  var HOUSE_CELLS = { '5,10': 1, '6,9': 1, '6,10': 1, '6,11': 1 };
+
+  // Maze layout: two concentric rectangular loop corridors (an outer ring and a
+  // middle ring) joined by four straight spokes, wrapped around a solid centre
+  // block that holds the ghost house. Every corridor is either on a loop (degree
+  // 2 throughout, degree 3 only at a spoke junction) or a straight spoke — so
+  // there are no dead ends, and each edge/spoke is long enough to hold a
+  // direction for many cells instead of turning every cell or two.
   function buildMaze() {
     var g = [];
     for (var r = 0; r < ROWS; r++) {
@@ -111,20 +122,53 @@
       for (var c = 0; c < COLS; c++) row.push(DOT);
       g.push(row);
     }
-    for (r = 0; r < ROWS; r++) { g[r][0] = WALL; g[r][COLS - 1] = WALL; }
-    for (var c2 = 0; c2 < COLS; c2++) { g[0][c2] = WALL; g[ROWS - 1][c2] = WALL; }
+
+    function wallRect(r0, r1, c0, c1) {
+      for (var r = r0; r <= r1; r++) for (var c = c0; c <= c1; c++) g[r][c] = WALL;
+    }
+    function pathRing(r0, r1, c0, c1) {
+      for (var c = c0; c <= c1; c++) { g[r0][c] = DOT; g[r1][c] = DOT; }
+      for (var r = r0; r <= r1; r++) { g[r][c0] = DOT; g[r][c1] = DOT; }
+    }
+
+    // Outer border wall, with a tunnel opening at the middle row.
+    wallRect(0, ROWS - 1, 0, 0);
+    wallRect(0, ROWS - 1, COLS - 1, COLS - 1);
+    wallRect(0, 0, 0, COLS - 1);
+    wallRect(ROWS - 1, ROWS - 1, 0, COLS - 1);
     g[TUNNEL_ROW][0] = EMPTY;
     g[TUNNEL_ROW][COLS - 1] = EMPTY;
-    for (r = 2; r <= 12; r += 2) {
-      for (c2 = 2; c2 <= 16; c2 += 2) g[r][c2] = WALL;
-    }
-    // Ghost house (symmetric around the centre column) with a single door.
-    g[6][8] = WALL; g[6][9] = EMPTY; g[6][10] = WALL;
-    g[7][7] = WALL; g[7][8] = EMPTY; g[7][9] = EMPTY; g[7][10] = EMPTY; g[7][11] = WALL;
-    g[8][8] = WALL; g[8][9] = WALL; g[8][10] = WALL;
-    // Power pellets near the four inner corners.
+
+    // Solid band between the border and the outer ring, then the outer ring itself.
+    wallRect(1, ROWS - 2, 1, COLS - 2);
+    pathRing(1, ROWS - 2, 1, COLS - 2);
+
+    // Solid band between the outer ring and the middle ring, then the middle ring.
+    pathRing(4, ROWS - 5, 4, COLS - 5);
+    // (the band between the two rings is already solid wall from the fill above —
+    // punch the four spokes back open below)
+
+    // Solid centre block (holds the ghost house), then the middle ring re-applied
+    // on top so it stays open where the block's fill would have covered it.
+    wallRect(5, ROWS - 6, 5, COLS - 6);
+    pathRing(4, ROWS - 5, 4, COLS - 5);
+
+    // Four spokes connecting outer ring <-> middle ring, at the mid-point of each side.
+    g[2][CENTER_COL] = DOT; g[3][CENTER_COL] = DOT;                 // top
+    g[ROWS - 3][CENTER_COL] = DOT; g[ROWS - 4][CENTER_COL] = DOT;   // bottom
+    g[TUNNEL_ROW][2] = DOT; g[TUNNEL_ROW][3] = DOT;                 // left
+    g[TUNNEL_ROW][COLS - 3] = DOT; g[TUNNEL_ROW][COLS - 4] = DOT;   // right
+
+    // Ghost house: its door sits directly on the middle ring's top edge (row 4),
+    // no connecting corridor in between — a stub corridor leading only to a
+    // door the player can't pass through would itself be a dead end.
+    g[5][CENTER_COL] = EMPTY; // door, opens straight onto the ring above
+    g[6][CENTER_COL - 1] = EMPTY; g[6][CENTER_COL] = EMPTY; g[6][CENTER_COL + 1] = EMPTY; // interior
+
+    // Power pellets near the four outer-ring corners.
     g[1][1] = POWER; g[1][COLS - 2] = POWER;
     g[ROWS - 2][1] = POWER; g[ROWS - 2][COLS - 2] = POWER;
+
     return g;
   }
 
@@ -134,12 +178,14 @@
     return grid[row][col] === WALL;
   }
 
-  function canMoveDir(grid, col, row, dir) {
+  function canMoveDir(grid, col, row, dir, isPlayer) {
     if (!dir || (dir.dx === 0 && dir.dy === 0)) return false;
     var nc = col + dir.dx, nr = row + dir.dy;
     if (nr === TUNNEL_ROW && (nc < 0 || nc >= COLS)) return true;
     if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) return false;
-    return !isWallCell(grid, nc, nr);
+    if (isWallCell(grid, nc, nr)) return false;
+    if (isPlayer && HOUSE_CELLS[nr + ',' + nc]) return false;
+    return true;
   }
 
   function bfsNextStep(grid, startCol, startRow, targetCol, targetRow) {
@@ -209,7 +255,7 @@
 
   function newPlayer() {
     var c = PLAYER_START.col, r = PLAYER_START.row;
-    return { col: c, row: r, x: c * CELL + CELL / 2, y: r * CELL + CELL / 2, dir: DIRS.none, queuedDir: DIRS.none, mouthT: 0 };
+    return { col: c, row: r, x: c * CELL + CELL / 2, y: r * CELL + CELL / 2, dir: DIRS.none, queuedDir: DIRS.none, mouthT: 0, isPlayer: true };
   }
 
   function newGhosts() {
@@ -277,14 +323,15 @@
   // ---------- Update ----------
 
   function stepEntity(e, dt, speed, desiredDir) {
+    var isPlayer = !!e.isPlayer;
     var col = Math.floor(e.x / CELL), row = Math.floor(e.y / CELL);
     var cx = col * CELL + CELL / 2, cy = row * CELL + CELL / 2;
     var dist = Math.hypot(e.x - cx, e.y - cy);
     var moveDist = speed * dt;
     if (dist <= moveDist) {
       e.x = cx; e.y = cy; e.col = col; e.row = row;
-      if (desiredDir && canMoveDir(grid, col, row, desiredDir)) e.dir = desiredDir;
-      else if (!canMoveDir(grid, col, row, e.dir)) e.dir = DIRS.none;
+      if (desiredDir && canMoveDir(grid, col, row, desiredDir, isPlayer)) e.dir = desiredDir;
+      else if (!canMoveDir(grid, col, row, e.dir, isPlayer)) e.dir = DIRS.none;
       var leftover = moveDist - dist;
       e.x += e.dir.dx * leftover;
       e.y += e.dir.dy * leftover;
