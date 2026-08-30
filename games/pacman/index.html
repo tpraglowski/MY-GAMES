@@ -58,6 +58,7 @@
 <div id="game-screen">
   <div id="hud">
     <div class="hud-left">
+      <span id="level-label">Poziom 1/3</span>
       <span id="score-label">Wynik: 0</span>
       <div id="lives"></div>
     </div>
@@ -65,7 +66,7 @@
   </div>
 
   <div id="canvas-wrap">
-    <canvas id="game-canvas" width="504" height="408"></canvas>
+    <canvas id="game-canvas"></canvas>
     <div id="message-overlay">
       <h2 id="message-title"></h2>
       <p id="message-text"></p>
@@ -83,31 +84,55 @@
 
 <script>
 (function () {
-  var CELL = 24, COLS = 21, ROWS = 17, TUNNEL_ROW = 8;
-  var CANVAS_W = COLS * CELL, CANVAS_H = ROWS * CELL;
+  var CELL = 24;
   var WALL = '#', DOT = '.', POWER = 'o', EMPTY = ' ';
-  var CENTER_COL = 10; // (COLS-1)/2 — every wall placed below mirrors around this column
-
   var PLAYER_SPEED = 88;      // px/sec
-  var GHOST_SPEED = 78;
   var GHOST_FRIGHT_SPEED = 55;
-  var FRIGHT_MS = 7000;
   var GHOST_COLORS = ['#e74c3c', '#ff8fd0', '#00cec9'];
-  var GHOST_START = [
-    { col: 9, row: 6 },
-    { col: 10, row: 6 },
-    { col: 11, row: 6 },
-  ];
-  var PLAYER_START = { col: 10, row: 12 };
   var DIRS = {
     up: { dx: 0, dy: -1 }, down: { dx: 0, dy: 1 },
     left: { dx: -1, dy: 0 }, right: { dx: 1, dy: 0 },
     none: { dx: 0, dy: 0 },
   };
 
-  // The ghost-house door + interior — off-limits to the player (ghosts-only),
-  // which also removes the one spot that would otherwise be a dead end.
-  var HOUSE_CELLS = { '5,10': 1, '6,9': 1, '6,10': 1, '6,11': 1 };
+  // Three levels, same proven maze topology (two concentric loop corridors +
+  // four spokes around a solid ghost-house block — see buildMaze below)
+  // scaled up and sped up each time: a bigger maze means more dots and a
+  // longer level, faster ghosts and a shorter power-pellet window make the
+  // chase itself harder. COLS/ROWS must stay odd (so there's a true centre
+  // column/row for the maze to mirror around).
+  var LEVELS = [
+    { cols: 21, rows: 17, ghostSpeed: 78, frightMs: 7000 },
+    { cols: 23, rows: 19, ghostSpeed: 88, frightMs: 6000 },
+    { cols: 25, rows: 21, ghostSpeed: 98, frightMs: 5000 },
+  ];
+
+  // Everything below is set per level by loadLevelConfig().
+  var COLS, ROWS, TUNNEL_ROW, CENTER_COL, CANVAS_W, CANVAS_H;
+  var GHOST_SPEED, FRIGHT_MS, GHOST_START, PLAYER_START, HOUSE_CELLS;
+
+  function loadLevelConfig(index) {
+    var lvl = LEVELS[index];
+    COLS = lvl.cols; ROWS = lvl.rows;
+    TUNNEL_ROW = (ROWS - 1) / 2;
+    CENTER_COL = (COLS - 1) / 2;
+    CANVAS_W = COLS * CELL; CANVAS_H = ROWS * CELL;
+    GHOST_SPEED = lvl.ghostSpeed;
+    FRIGHT_MS = lvl.frightMs;
+    GHOST_START = [
+      { col: CENTER_COL - 1, row: 6 },
+      { col: CENTER_COL, row: 6 },
+      { col: CENTER_COL + 1, row: 6 },
+    ];
+    PLAYER_START = { col: CENTER_COL, row: ROWS - 5 };
+    // The ghost-house door + interior — off-limits to the player (ghosts-only),
+    // which also removes the one spot that would otherwise be a dead end.
+    HOUSE_CELLS = {};
+    HOUSE_CELLS['5,' + CENTER_COL] = 1;
+    HOUSE_CELLS['6,' + (CENTER_COL - 1)] = 1;
+    HOUSE_CELLS['6,' + CENTER_COL] = 1;
+    HOUSE_CELLS['6,' + (CENTER_COL + 1)] = 1;
+  }
 
   // Maze layout: two concentric rectangular loop corridors (an outer ring and a
   // middle ring) joined by four straight spokes, wrapped around a solid centre
@@ -233,6 +258,7 @@
   var gameScreen = document.getElementById('game-screen');
   var canvas = document.getElementById('game-canvas');
   var ctx = canvas.getContext('2d');
+  var levelLabel = document.getElementById('level-label');
   var scoreLabel = document.getElementById('score-label');
   var livesEl = document.getElementById('lives');
   var startBtn = document.getElementById('start-btn');
@@ -242,7 +268,7 @@
   var overlayText = document.getElementById('message-text');
   var overlayBtn = document.getElementById('overlay-btn');
 
-  var grid, pelletsLeft, score, lives, player, ghosts, phase, phaseTimer, frightTimer, running, lastTime;
+  var grid, pelletsLeft, score, lives, player, ghosts, phase, phaseTimer, frightTimer, running, lastTime, levelIndex;
 
   function heartSvg() {
     return '<svg viewBox="0 0 20 20"><path d="M10 16l-6-5.2C2 8.8 2 5.8 4.4 4.6 6.2 3.7 8.4 4.4 10 6.4c1.6-2 3.8-2.7 5.6-1.8C18 5.8 18 8.8 16 10.8z" fill="#f1c40f"/></svg>';
@@ -301,20 +327,46 @@
   function winGame() {
     running = false;
     phase = 'win';
-    showOverlay('🎉 Wygrana!', 'Zebrałeś wszystkie kropki! Wynik: ' + score + '.', true);
+    showOverlay('🎉 Wygrana!', 'Ukończyłeś wszystkie ' + LEVELS.length + ' poziomy! Wynik: ' + score + '.', true);
   }
 
-  function startRound() {
+  // Loads a level's maze + entities (keeping score/lives as-is — used both for
+  // the very first level of a new game and for advancing after clearing one).
+  function loadLevel(index) {
+    levelIndex = index;
+    loadLevelConfig(levelIndex);
+    canvas.width = CANVAS_W;
+    canvas.height = CANVAS_H;
+    levelLabel.textContent = 'Poziom ' + (levelIndex + 1) + '/' + LEVELS.length;
     grid = buildMaze();
     pelletsLeft = countPellets(grid);
-    score = 0;
-    lives = 3;
-    renderLives();
-    scoreLabel.textContent = 'Wynik: 0';
     resetPositions();
     phase = 'ready';
     phaseTimer = 1100;
     hideOverlay();
+  }
+
+  function levelComplete() {
+    if (levelIndex < LEVELS.length - 1) {
+      running = false;
+      showOverlay('Poziom ukończony!', 'Za chwilę poziom ' + (levelIndex + 2) + '…');
+      setTimeout(function () {
+        loadLevel(levelIndex + 1);
+        running = true;
+        lastTime = null;
+        requestAnimationFrame(tick);
+      }, 1400);
+    } else {
+      winGame();
+    }
+  }
+
+  function startRound() {
+    score = 0;
+    lives = 3;
+    renderLives();
+    scoreLabel.textContent = 'Wynik: 0';
+    loadLevel(0);
     running = true;
     lastTime = null;
     requestAnimationFrame(tick);
@@ -331,15 +383,38 @@
   // never actually crossed into the next cell. Tracking the target cell
   // explicitly (and only advancing e.col/e.row on real arrival) makes the
   // remaining distance strictly decrease every frame, so it can't get stuck.
-  function stepEntity(e, dt, speed, desiredDir) {
+  // desiredDirFn is called fresh every time the entity reaches a decision point
+  // (not once per frame) — important for ghosts, whose desired direction is
+  // itself a function of position: recomputing it only once per frame meant
+  // that a ghost arriving at a turn mid-frame used the STALE direction from
+  // before it arrived, which (when that stale direction still happened to be
+  // a legal, non-wall move) let it sail one cell past the correct turn and
+  // only correct course on the next recompute — a one-cell overshoot-and-
+  // correct that looked like aimless back-and-forth wandering instead of a
+  // chase. The player's queuedDir doesn't need this (it's a plain field, so
+  // "calling" it is just as fresh either way), but every caller now passes a
+  // function for consistency.
+  function stepEntity(e, dt, speed, desiredDirFn) {
     var isPlayer = !!e.isPlayer;
     var remaining = speed * dt;
     var guard = 0; // safety net against any unforeseen non-terminating case
     while (remaining > 0 && guard++ < 20) {
-      if (e.dir.dx === 0 && e.dir.dy === 0) {
-        if (desiredDir && canMoveDir(grid, e.col, e.row, desiredDir, isPlayer)) { e.dir = desiredDir; continue; }
-        break;
-      }
+      // e.col/e.row is always the authoritative "last cell fully arrived at" —
+      // true on the very first iteration (spawn position) and true again after
+      // every arrival below. So the direction decision always happens BEFORE
+      // any movement toward a new target, from a position we know is legal:
+      // prefer the freshest desired direction if it's open, else keep going
+      // straight if that's still open, else stop. This also fixes a second bug
+      // where an entity would start walking toward a target cell using its
+      // OLD e.dir without first checking that direction was even legal from
+      // here — e.g. a ghost spawned facing a direction that happened to be a
+      // wall just sat there never picking a new one, since validation only
+      // used to happen after arriving somewhere (which it could never do).
+      var desiredDir = desiredDirFn();
+      if (desiredDir && canMoveDir(grid, e.col, e.row, desiredDir, isPlayer)) e.dir = desiredDir;
+      else if (!canMoveDir(grid, e.col, e.row, e.dir, isPlayer)) e.dir = DIRS.none;
+      if (e.dir.dx === 0 && e.dir.dy === 0) break;
+
       var tCol = e.col + e.dir.dx, tRow = e.row + e.dir.dy; // may be -1/COLS at the tunnel row, fixed up on arrival
       var tx = tCol * CELL + CELL / 2, ty = tRow * CELL + CELL / 2;
       var dist = e.dir.dx ? Math.abs(tx - e.x) : Math.abs(ty - e.y);
@@ -354,14 +429,13 @@
           if (e.col < 0) { e.col = COLS - 1; e.x = e.col * CELL + CELL / 2; }
           else if (e.col >= COLS) { e.col = 0; e.x = e.col * CELL + CELL / 2; }
         }
-        if (desiredDir && canMoveDir(grid, e.col, e.row, desiredDir, isPlayer)) e.dir = desiredDir;
-        else if (!canMoveDir(grid, e.col, e.row, e.dir, isPlayer)) { e.dir = DIRS.none; break; }
+        // loop again: next iteration re-validates direction fresh from the new cell
       }
     }
   }
 
   function updatePlayer(dt) {
-    stepEntity(player, dt, PLAYER_SPEED, player.queuedDir);
+    stepEntity(player, dt, PLAYER_SPEED, function () { return player.queuedDir; });
     player.mouthT += dt;
 
     var col = Math.round((player.x - CELL / 2) / CELL);
@@ -373,7 +447,7 @@
         score += 10;
         pelletsLeft -= 1;
         scoreLabel.textContent = 'Wynik: ' + score;
-        if (pelletsLeft <= 0) { winGame(); return; }
+        if (pelletsLeft <= 0) { levelComplete(); return; }
       } else if (cell === POWER) {
         grid[row][col] = EMPTY;
         score += 50;
@@ -411,7 +485,7 @@
         g.frightened = false;
       }
       var speed = g.eaten ? GHOST_SPEED * 1.6 : (g.frightened ? GHOST_FRIGHT_SPEED : GHOST_SPEED);
-      stepEntity(g, dt, speed, ghostDesiredDir(g));
+      stepEntity(g, dt, speed, function () { return ghostDesiredDir(g); });
     });
   }
 
