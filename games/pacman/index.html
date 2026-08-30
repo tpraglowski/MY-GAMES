@@ -95,51 +95,145 @@
     none: { dx: 0, dy: 0 },
   };
 
-  // Three levels, same proven maze topology (two concentric loop corridors +
-  // four spokes around a solid ghost-house block — see buildMaze below)
-  // scaled up and sped up each time: a bigger maze means more dots and a
-  // longer level, faster ghosts and a shorter power-pellet window make the
-  // chase itself harder. COLS/ROWS must stay odd (so there's a true centre
-  // column/row for the maze to mirror around).
+  // Six levels, one per classic maze in the reference sheet, in the same
+  // order: Original Prototype, Pac-Man, Ms. Pac-Man (1)-(4). Each has its own
+  // block layout (see MAZE_BLOCKS below) but the same wall colour as before,
+  // the same ghost-house/tunnel mechanics, and gets a little faster/harder.
   var LEVELS = [
-    { cols: 21, rows: 17, ghostSpeed: 78, frightMs: 7000 },
-    { cols: 23, rows: 19, ghostSpeed: 88, frightMs: 6000 },
-    { cols: 25, rows: 21, ghostSpeed: 98, frightMs: 5000 },
+    { name: 'Original Prototype', ghostSpeed: 76, frightMs: 7000 },
+    { name: 'Pac-Man', ghostSpeed: 82, frightMs: 6500 },
+    { name: 'Ms. Pac-Man (1)', ghostSpeed: 88, frightMs: 6000 },
+    { name: 'Ms. Pac-Man (2)', ghostSpeed: 93, frightMs: 5500 },
+    { name: 'Ms. Pac-Man (3)', ghostSpeed: 98, frightMs: 5000 },
+    { name: 'Ms. Pac-Man (4)', ghostSpeed: 104, frightMs: 4500 },
   ];
 
-  // Everything below is set per level by loadLevelConfig().
-  var COLS, ROWS, TUNNEL_ROW, CENTER_COL, CANVAS_W, CANVAS_H;
-  var GHOST_SPEED, FRIGHT_MS, GHOST_START, PLAYER_START, HOUSE_CELLS;
+  // Fixed grid size for every level (COLS/ROWS odd so there's a true centre
+  // column/row to mirror the layout around).
+  var COLS = 23, ROWS = 25, TUNNEL_ROW = 12, CENTER_COL = 11;
+  var CANVAS_W = COLS * CELL, CANVAS_H = ROWS * CELL;
+  var GHOST_START = [
+    { col: CENTER_COL - 1, row: 10 },
+    { col: CENTER_COL, row: 10 },
+    { col: CENTER_COL + 1, row: 10 },
+  ];
+  var PLAYER_START = { col: CENTER_COL, row: 16 };
+  // The ghost-house door + interior — off-limits to the player (ghosts-only).
+  var HOUSE_CELLS = {};
+  HOUSE_CELLS['9,' + CENTER_COL] = 1;
+  HOUSE_CELLS['10,' + (CENTER_COL - 1)] = 1;
+  HOUSE_CELLS['10,' + CENTER_COL] = 1;
+  HOUSE_CELLS['10,' + (CENTER_COL + 1)] = 1;
+  var GHOST_SPEED, FRIGHT_MS;
 
   function loadLevelConfig(index) {
     var lvl = LEVELS[index];
-    COLS = lvl.cols; ROWS = lvl.rows;
-    TUNNEL_ROW = (ROWS - 1) / 2;
-    CENTER_COL = (COLS - 1) / 2;
-    CANVAS_W = COLS * CELL; CANVAS_H = ROWS * CELL;
     GHOST_SPEED = lvl.ghostSpeed;
     FRIGHT_MS = lvl.frightMs;
-    GHOST_START = [
-      { col: CENTER_COL - 1, row: 6 },
-      { col: CENTER_COL, row: 6 },
-      { col: CENTER_COL + 1, row: 6 },
-    ];
-    PLAYER_START = { col: CENTER_COL, row: ROWS - 5 };
-    // The ghost-house door + interior — off-limits to the player (ghosts-only),
-    // which also removes the one spot that would otherwise be a dead end.
-    HOUSE_CELLS = {};
-    HOUSE_CELLS['5,' + CENTER_COL] = 1;
-    HOUSE_CELLS['6,' + (CENTER_COL - 1)] = 1;
-    HOUSE_CELLS['6,' + CENTER_COL] = 1;
-    HOUSE_CELLS['6,' + (CENTER_COL + 1)] = 1;
   }
 
-  // Maze layout: two concentric rectangular loop corridors (an outer ring and a
-  // middle ring) joined by four straight spokes, wrapped around a solid centre
-  // block that holds the ghost house. Every corridor is either on a loop (degree
-  // 2 throughout, degree 3 only at a spoke junction) or a straight spoke — so
-  // there are no dead ends, and each edge/spoke is long enough to hold a
-  // direction for many cells instead of turning every cell or two.
+  // Each level's distinctive wall blocks — plain rectangles [r0, r1, c0, c1],
+  // mirrored automatically around the centre column so every layout stays
+  // left-right symmetric. Unlike the old ring maze, these deliberately leave
+  // a few short dead-end pockets here and there (a couple of cells that only
+  // connect back the way they came) — the hallmark side-alcove look of the
+  // classic mazes in the reference sheet, and no longer something we avoid.
+  var MAZE_BLOCKS = [
+    // 1. Original Prototype — sparse, big chunky T/blob shapes.
+    [
+      [2, 3, 2, 5], [2, 3, 17, 20],
+      [2, 6, 9, 9], [2, 6, 13, 13],
+      [5, 6, 2, 6], [5, 6, 16, 20],
+      [8, 8, 2, 9], [8, 8, 13, 20],
+      [14, 15, 2, 6], [14, 15, 16, 20],
+      [14, 20, 9, 9], [14, 20, 13, 13],
+      [17, 18, 2, 5], [17, 18, 17, 20],
+      [20, 22, 2, 6], [20, 22, 16, 20],
+      [8, 12, 1, 1], [8, 12, 21, 21],
+    ],
+    // 2. Pac-Man — the familiar medium-density rhythm of side pockets and
+    // corridors running the length of the maze.
+    [
+      [2, 2, 2, 5], [2, 2, 17, 20],
+      [2, 5, 5, 5], [2, 5, 17, 17],
+      [2, 3, 8, 9], [2, 3, 13, 14],
+      [5, 8, 2, 2], [5, 8, 20, 20],
+      [5, 5, 8, 14],
+      [7, 8, 5, 6], [7, 8, 16, 17],
+      [15, 16, 5, 6], [15, 16, 16, 17],
+      [15, 20, 2, 2], [15, 20, 20, 20],
+      [17, 20, 8, 9], [17, 20, 13, 14],
+      [22, 22, 2, 9], [22, 22, 13, 20],
+      [19, 22, 5, 5], [19, 22, 17, 17],
+    ],
+    // 3. Ms. Pac-Man (1) — regular grid of chunky rounded blocks.
+    [
+      [2, 3, 2, 4], [2, 3, 18, 20],
+      [2, 3, 7, 7], [2, 3, 15, 15],
+      [2, 5, 10, 12],
+      [5, 6, 2, 3], [5, 6, 19, 20],
+      [5, 6, 6, 7], [5, 6, 15, 16],
+      [8, 9, 2, 4], [8, 9, 18, 20],
+      [8, 9, 9, 13],
+      [15, 16, 9, 13],
+      [15, 16, 2, 4], [15, 16, 18, 20],
+      [18, 19, 6, 7], [18, 19, 15, 16],
+      [18, 19, 2, 3], [18, 19, 19, 20],
+      [19, 22, 10, 12],
+      [21, 22, 2, 4], [21, 22, 18, 20],
+      [21, 22, 7, 7], [21, 22, 15, 15],
+    ],
+    // 4. Ms. Pac-Man (2) — plus-sign / cross intersections everywhere.
+    [
+      [2, 6, 4, 4], [2, 6, 18, 18],
+      [4, 4, 2, 6], [4, 4, 16, 20],
+      [2, 3, 9, 9], [2, 3, 13, 13],
+      [7, 8, 7, 8], [7, 8, 14, 15],
+      [7, 11, 2, 2], [7, 11, 20, 20],
+      [16, 20, 2, 2], [16, 20, 20, 20],
+      [16, 17, 7, 8], [16, 17, 14, 15],
+      [20, 20, 2, 6], [20, 20, 16, 20],
+      [18, 22, 4, 4], [18, 22, 18, 18],
+      [21, 22, 9, 9], [21, 22, 13, 13],
+    ],
+    // 5. Ms. Pac-Man (3) — denser corridors, lots of short spurs.
+    [
+      [2, 2, 2, 6], [2, 2, 16, 20],
+      [2, 6, 6, 6], [2, 6, 16, 16],
+      [4, 5, 2, 3], [4, 5, 19, 20],
+      [4, 5, 9, 9], [4, 5, 13, 13],
+      [8, 9, 4, 5], [8, 9, 17, 18],
+      [8, 12, 2, 2], [8, 12, 20, 20],
+      [11, 12, 9, 9], [11, 12, 13, 13],
+      [15, 16, 9, 9], [15, 16, 13, 13],
+      [13, 17, 2, 2], [13, 17, 20, 20],
+      [16, 17, 4, 5], [16, 17, 17, 18],
+      [19, 20, 9, 9], [19, 20, 13, 13],
+      [19, 20, 2, 3], [19, 20, 19, 20],
+      [18, 22, 6, 6], [18, 22, 16, 16],
+      [22, 22, 2, 6], [22, 22, 16, 20],
+    ],
+    // 6. Ms. Pac-Man (4) — the busiest layout, small blocks throughout.
+    [
+      [2, 3, 2, 3], [2, 3, 19, 20],
+      [2, 3, 6, 7], [2, 3, 15, 16],
+      [2, 5, 10, 12],
+      [5, 6, 2, 2], [5, 6, 20, 20],
+      [5, 6, 9, 9], [5, 6, 13, 13],
+      [8, 9, 4, 5], [8, 9, 17, 18],
+      [8, 9, 2, 2], [8, 9, 20, 20],
+      [8, 9, 9, 13],
+      [15, 16, 9, 13],
+      [15, 16, 2, 2], [15, 16, 20, 20],
+      [15, 16, 4, 5], [15, 16, 17, 18],
+      [18, 19, 2, 2], [18, 19, 20, 20],
+      [18, 19, 9, 9], [18, 19, 13, 13],
+      [19, 22, 10, 12],
+      [21, 22, 6, 7], [21, 22, 15, 16],
+      [21, 22, 2, 3], [21, 22, 19, 20],
+    ],
+  ];
+
   function buildMaze() {
     var g = [];
     for (var r = 0; r < ROWS; r++) {
@@ -148,49 +242,44 @@
       g.push(row);
     }
 
-    function wallRect(r0, r1, c0, c1) {
-      for (var r = r0; r <= r1; r++) for (var c = c0; c <= c1; c++) g[r][c] = WALL;
+    function wall(r0, r1, c0, c1) {
+      for (var r = r0; r <= r1; r++) for (var c = c0; c <= c1; c++) {
+        if (r >= 0 && r < ROWS && c >= 0 && c < COLS) g[r][c] = WALL;
+      }
     }
-    function pathRing(r0, r1, c0, c1) {
-      for (var c = c0; c <= c1; c++) { g[r0][c] = DOT; g[r1][c] = DOT; }
-      for (var r = r0; r <= r1; r++) { g[r][c0] = DOT; g[r][c1] = DOT; }
+    function wallSym(r0, r1, c0, c1) {
+      wall(r0, r1, c0, c1);
+      wall(r0, r1, COLS - 1 - c1, COLS - 1 - c0);
     }
 
-    // Outer border wall, with a tunnel opening at the middle row.
-    wallRect(0, ROWS - 1, 0, 0);
-    wallRect(0, ROWS - 1, COLS - 1, COLS - 1);
-    wallRect(0, 0, 0, COLS - 1);
-    wallRect(ROWS - 1, ROWS - 1, 0, COLS - 1);
+    // Outer border, with a tunnel opening at the middle row.
+    wall(0, ROWS - 1, 0, 0);
+    wall(0, ROWS - 1, COLS - 1, COLS - 1);
+    wall(0, 0, 0, COLS - 1);
+    wall(ROWS - 1, ROWS - 1, 0, COLS - 1);
     g[TUNNEL_ROW][0] = EMPTY;
     g[TUNNEL_ROW][COLS - 1] = EMPTY;
 
-    // Solid band between the border and the outer ring, then the outer ring itself.
-    wallRect(1, ROWS - 2, 1, COLS - 2);
-    pathRing(1, ROWS - 2, 1, COLS - 2);
+    // This level's distinctive block layout.
+    MAZE_BLOCKS[levelIndex].forEach(function (b) {
+      if (b.length) wallSym(b[0], b[1], b[2], b[3]);
+    });
 
-    // Solid band between the outer ring and the middle ring, then the middle ring.
-    pathRing(4, ROWS - 5, 4, COLS - 5);
-    // (the band between the two rings is already solid wall from the fill above —
-    // punch the four spokes back open below)
+    // Ghost house: door on row 9, a 3-wide interior room on row 10, closed
+    // floor on row 11 — kept identical across levels for reliability.
+    wall(9, 11, CENTER_COL - 1, CENTER_COL + 1);
+    g[9][CENTER_COL] = EMPTY; // door
+    g[10][CENTER_COL - 1] = EMPTY; g[10][CENTER_COL] = EMPTY; g[10][CENTER_COL + 1] = EMPTY;
 
-    // Solid centre block (holds the ghost house), then the middle ring re-applied
-    // on top so it stays open where the block's fill would have covered it.
-    wallRect(5, ROWS - 6, 5, COLS - 6);
-    pathRing(4, ROWS - 5, 4, COLS - 5);
+    // Safety nets independent of whatever a level's block layout happens to
+    // do nearby: the tunnel opening must always be reachable from the row
+    // it's on, and the player's spawn column must always connect up to the
+    // rest of the maze (down to the tunnel row) — otherwise a level's block
+    // list could accidentally wall the player in, or seal off the tunnel.
+    g[TUNNEL_ROW][1] = DOT; g[TUNNEL_ROW][COLS - 2] = DOT;
+    for (var sr = 12; sr <= 18; sr++) g[sr][CENTER_COL] = DOT;
 
-    // Four spokes connecting outer ring <-> middle ring, at the mid-point of each side.
-    g[2][CENTER_COL] = DOT; g[3][CENTER_COL] = DOT;                 // top
-    g[ROWS - 3][CENTER_COL] = DOT; g[ROWS - 4][CENTER_COL] = DOT;   // bottom
-    g[TUNNEL_ROW][2] = DOT; g[TUNNEL_ROW][3] = DOT;                 // left
-    g[TUNNEL_ROW][COLS - 3] = DOT; g[TUNNEL_ROW][COLS - 4] = DOT;   // right
-
-    // Ghost house: its door sits directly on the middle ring's top edge (row 4),
-    // no connecting corridor in between — a stub corridor leading only to a
-    // door the player can't pass through would itself be a dead end.
-    g[5][CENTER_COL] = EMPTY; // door, opens straight onto the ring above
-    g[6][CENTER_COL - 1] = EMPTY; g[6][CENTER_COL] = EMPTY; g[6][CENTER_COL + 1] = EMPTY; // interior
-
-    // Power pellets near the four outer-ring corners.
+    // Power pellets near the four corners.
     g[1][1] = POWER; g[1][COLS - 2] = POWER;
     g[ROWS - 2][1] = POWER; g[ROWS - 2][COLS - 2] = POWER;
 
