@@ -546,7 +546,14 @@ main {
 
 @media (max-width: 600px) {
   .scratch-embed--native {
-    aspect-ratio: 3 / 4;
+    /* A fixed aspect-ratio here forced every native game into the same
+       box shape regardless of its own canvas — fine for a 4:3 landscape
+       game like Platformówka, but it squeezed a near-square game like
+       Pac-Man's 552x600 canvas down to a fraction of the screen width.
+       A generous flexible height instead lets each game's own
+       max-width/max-height:100% scaling fill whatever shape fits it best. */
+    aspect-ratio: auto;
+    height: min(82vh, 640px);
   }
 }
 
