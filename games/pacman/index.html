@@ -45,6 +45,24 @@
 </head>
 <body>
 
+<div id="boot-error"></div>
+<script>
+// Registered before the game script runs, so it also catches a parse error
+// in that script tag (which would otherwise just leave the page silently
+// blank — no console visible on a phone, so "nothing happens" is all a
+// player can report). Shows the actual error message on the page instead.
+window.addEventListener('error', function (e) {
+  var box = document.getElementById('boot-error');
+  if (!box) return;
+  box.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#1a0a0a;color:#ff8a8a;' +
+    'font:13px/1.5 -apple-system,sans-serif;padding:1.2rem;overflow:auto;white-space:pre-wrap;';
+  var msg = (e.message || 'Nieznany błąd') +
+    (e.filename ? '\n' + e.filename + ':' + e.lineno + ':' + e.colno : '');
+  box.textContent = '⚠️ Błąd uruchamiania gry:\n\n' + msg +
+    '\n\nPrześlij ten tekst, żeby dało się to naprawić.';
+});
+</script>
+
 <div id="start-screen">
   <h1>👻 Pac-Man</h1>
   <p>

@@ -511,6 +511,11 @@ main {
   position: relative;
   width: 100%;
   max-width: 485px;
+  /* Fallback for browsers without aspect-ratio support (older Safari) — the
+     iframe inside is position:absolute, so without this the box would
+     collapse to 0 height and the embedded game would look like a blank
+     area. Overridden by the aspect-ratio rule below wherever it's supported. */
+  min-height: 300px;
   aspect-ratio: 485 / 402;
   margin: 1.5rem 0;
   border-radius: 12px;
@@ -535,6 +540,7 @@ main {
 
 .scratch-embed--native {
   max-width: 700px;
+  min-height: 420px;
   aspect-ratio: 4 / 3;
 }
 
