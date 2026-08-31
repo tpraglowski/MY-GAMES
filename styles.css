@@ -368,6 +368,30 @@ main {
   border-top: 1px solid var(--border);
 }
 
+@media (max-width: 640px) {
+  /* On phones, pin the header (and footer) in place and let just the
+     current view's own content — the games list and its filters, on the
+     home page — scroll in the space between them, instead of the whole
+     page (header included) scrolling away. */
+  html, body {
+    height: 100vh;
+    height: 100dvh;
+  }
+  body {
+    overflow: hidden;
+  }
+  .site-header,
+  .site-footer {
+    flex-shrink: 0;
+  }
+  main {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 .auth-page,
 .form-page {
   display: flex;
