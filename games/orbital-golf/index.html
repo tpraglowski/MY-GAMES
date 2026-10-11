@@ -278,7 +278,14 @@ window.addEventListener('error', function (e) {
     var c = W.cache[k];
     if (c) return c;
     var list = [];
-    if (k >= 2) { // first 120 m are hazard-free so a beginner's first shots can land
+    if (k === 0) {
+      // a bunker close to the tee: weak shots plop into it
+      list.push({ type: 'sand', a: 22, b: 40, level: baseHeight(W, 31) });
+    } else if (k === 1) {
+      // two trees a bit further on - a good shot has to clear them (or burn through)
+      list.push({ type: 'tree', x: 92, w: 2.2, h: 7, gy: baseHeight(W, 92), id: '1a' });
+      list.push({ type: 'tree', x: 108, w: 2.2, h: 8.5, gy: baseHeight(W, 108), id: '1b' });
+    } else if (k >= 2) { // the first 120 m have no ponds so a beginner's first shots can land
       var r = hash(k, W.id.length * 31 + W.g, 1), start = k * CHUNK + 8 + hash(k, 7, 2) * 20;
       var hz = W.hz, acc = 0, kind = 'none';
       if (r < (acc += hz.water)) kind = 'water';
@@ -296,11 +303,11 @@ window.addEventListener('error', function (e) {
         for (var i = 0; i < n; i++) {
           px += 3 + hash(k, i, 5) * 5;
           if (nearHole(W, px, px)) continue;
-          list.push({ type: 'tree', x: px, w: 2.2, h: 6 + hash(k, i, 6) * 4, gy: baseHeight(W, px) });
+          list.push({ type: 'tree', x: px, w: 2.2, h: 6 + hash(k, i, 6) * 4, gy: baseHeight(W, px), id: 't' + k + '_' + i });
         }
       } else if (kind === 'pole') {
         var pxx = start + 10;
-        if (!nearHole(W, pxx, pxx)) list.push({ type: 'pole', x: pxx, w: 0.5, h: 14, gy: baseHeight(W, pxx) });
+        if (!nearHole(W, pxx, pxx)) list.push({ type: 'pole', x: pxx, w: 0.5, h: 14, gy: baseHeight(W, pxx), id: 'p' + k });
       }
       // a bird now and then — hit one for a coin bonus
       if (k >= 3 && hash(k, 21, 7) < 0.4) {
@@ -316,16 +323,16 @@ window.addEventListener('error', function (e) {
     var c = W.scn[k];
     if (c) return c;
     var list = [];
-    if (k >= 1) {
+    if (k >= 0) {
       var i, x;
       if (W.house && hash(k, 31, 1) < 0.55) {
         x = k * CHUNK + 6 + hash(k, 32, 2) * 48;
-        if (!surfaceAt(W, x) && !surfaceAt(W, x + 5)) list.push({ type: 'house', x: x, v: Math.floor(hash(k, 33, 3) * 3) });
+        if (x >= 30 && !surfaceAt(W, x) && !surfaceAt(W, x + 5)) list.push({ type: 'house', x: x, v: Math.floor(hash(k, 33, 3) * 3) });
       }
       var nt = 2 + Math.floor(hash(k, 34, 4) * 3);
       for (i = 0; i < nt; i++) {
         x = k * CHUNK + hash(k, 35 + i, 5) * CHUNK;
-        if (!surfaceAt(W, x)) list.push({ type: 'stree', x: x, s: 0.8 + hash(k, 40 + i, 6) * 0.9 });
+        if (x >= 45 && !surfaceAt(W, x)) list.push({ type: 'stree', x: x, s: 0.8 + hash(k, 40 + i, 6) * 0.9 });
       }
     }
     W.scn[k] = list;
@@ -347,7 +354,7 @@ window.addEventListener('error', function (e) {
     var y = baseHeight(W, x);
     var k = Math.floor(x / CHUNK);
     for (var kk = k - 1; kk <= k + 1; kk++) {
-      if (kk < 1) continue;
+      if (kk < 0) continue;
       var fs = chunkFeatures(W, kk);
       for (var i = 0; i < fs.length; i++) {
         var f = fs[i];
@@ -361,7 +368,7 @@ window.addEventListener('error', function (e) {
   function surfaceAt(W, x) {
     var k = Math.floor(x / CHUNK);
     for (var kk = k - 1; kk <= k + 1; kk++) {
-      if (kk < 1) continue;
+      if (kk < 0) continue;
       var fs = chunkFeatures(W, kk);
       for (var i = 0; i < fs.length; i++) {
         var f = fs[i];
@@ -373,9 +380,10 @@ window.addEventListener('error', function (e) {
 
   // ---------- Physics ----------
 
-  function makeBall() { return { x: 0, y: 0.3, vx: 0, vy: 0, rest: 0, t: 0, skips: 0, holeIdx: -1, birds: 0, hit: {}, splash: null }; }
+  function makeBall() { return { x: 0, y: 0.3, vx: 0, vy: 0, rest: 0, t: 0, skips: 0, holeIdx: -1, birds: 0, hit: {}, splash: null, fire: false, destroyed: {}, crash: null, trees: 0 }; }
 
-  function launchBall(b, P, angleDeg, mult) {
+  function launchBall(b, P, angleDeg, mult, fire) {
+    b.fire = !!fire;
     var v = P.v0 * mult;
     var a = angleDeg * Math.PI / 180;
     b.vx = v * Math.cos(a);
@@ -386,7 +394,7 @@ window.addEventListener('error', function (e) {
   function collideObstacles(b, W) {
     var k = Math.floor(b.x / CHUNK);
     for (var kk = k - 1; kk <= k + 1; kk++) {
-      if (kk < 1) continue;
+      if (kk < 0) continue;
       var fs = chunkFeatures(W, kk);
       for (var i = 0; i < fs.length; i++) {
         var f = fs[i];
@@ -402,8 +410,13 @@ window.addEventListener('error', function (e) {
           continue;
         }
         if (f.type !== 'tree' && f.type !== 'pole') continue;
+        if (b.destroyed[f.id]) continue;
         var top = f.gy + f.h, hw = f.w / 2 + BALL_R;
         if (b.x > f.x - hw && b.x < f.x + hw && b.y < top && b.y > f.gy - 1) {
+          if (b.fire && f.type === 'tree') { // a burning ball goes straight through
+            b.destroyed[f.id] = true; b.trees++; b.crash = { x: f.x, y: f.gy + f.h * 0.5 };
+            continue;
+          }
           if (b.vy < 0 && b.y > top - 0.9) {
             b.y = top; b.vy = -b.vy * 0.4; b.vx *= 0.8;
           } else {
@@ -479,6 +492,7 @@ window.addEventListener('error', function (e) {
       if (r) return r;
     }
     b.t += dt;
+    if (b.fire && (b.rest > 0.05 || Math.sqrt(b.vx * b.vx + b.vy * b.vy) < 14)) b.fire = false;
     if (b.rest > 0.45) return 'stop';
     return b.t > 240 ? 'stop' : null;
   }
@@ -639,6 +653,7 @@ window.addEventListener('error', function (e) {
   var W = WORLDS[0], P = null, ball = makeBall();
   var cam = { x: -6, y: 0, ppm: 12, alt: 0, curve: 0 };
   var swingT = 0, theta = ANG_CENTER, lastZone = ZONES[0], golfSwing = 1, acc = 0, trail = [], trailT = 0;
+  var swingClock = 0, swingDur = 0.85, swingPerfect = false, swingTheta = ANG_CENTER, timeScale = 1;
   var readyAt = 0, clock = 0, particles = [], goalPulse = 0;
   var stars = [], i0;
   for (i0 = 0; i0 < 120; i0++) stars.push({ x: hash(i0, 1, 1), y: hash(i0, 2, 2), r: 0.6 + hash(i0, 3, 3) * 1.4 });
@@ -679,7 +694,7 @@ window.addEventListener('error', function (e) {
     ball = makeBall();
     P = statsFor(W, save.up, curBall());
     state = 'ready';
-    swingT = 0; theta = ANG_CENTER; golfSwing = 1; acc = 0; trail = []; trailT = 0; particles = [];
+    swingT = 0; theta = ANG_CENTER; golfSwing = 1; acc = 0; trail = []; trailT = 0; particles = []; swingClock = 0; timeScale = 1;
     readyAt = performance.now() + 450;
     cam.alt = 0; cam.curve = 0;
     var ppm = readyPpm();
@@ -695,15 +710,28 @@ window.addEventListener('error', function (e) {
   function readyPpm() { return Math.min(VW / 9, 0.4 * VH / 3.4); }
   function readyCamY(ppm) { return 0 + (0.8 - 0.66) * VH / ppm; }
 
-  function launch() {
+  // Tap: the golfer swings, and the ball only leaves the tee at the moment of
+  // impact. A perfect (green) hit gets the cinematic zoom-out, then a slow
+  // zoom-in on the ball before the strike.
+  function beginSwing() {
     if (state !== 'ready') return;
-    P = statsFor(W, save.up, curBall());
     lastZone = zoneFor(theta);
-    launchBall(ball, P, theta, lastZone.mult);
-    state = 'flight';
-    golfSwing = 0; acc = 0; trail = [];
+    swingTheta = theta;
+    swingPerfect = lastZone === ZONES[0];
+    swingDur = swingPerfect ? 2.1 : 0.85;
+    swingClock = 0;
+    golfSwing = 0;
+    state = 'swing';
     $('ui').classList.add('in-flight');
+  }
+
+  function doLaunch() {
+    P = statsFor(W, save.up, curBall());
+    launchBall(ball, P, swingTheta, lastZone.mult, swingPerfect);
+    state = 'flight';
+    acc = 0; trail = []; timeScale = 1;
     banner(lastZone.name);
+    spawnBurst(ball.x, ball.y, swingPerfect);
   }
 
   function finishShot(res) {
@@ -723,6 +751,7 @@ window.addEventListener('error', function (e) {
       coins += bb;
       lines.push('🐦 Trafione ptaki: <b>' + ball.birds + '</b> · <b>+' + fmt(bb) + ' 🪙</b>');
     }
+    if (ball.trees > 0) lines.push('🔥 Zniszczone drzewa: <b>' + ball.trees + '</b>');
     if (res === 'hole') {
       var bonus = Math.round(HOLE_BONUS[ball.holeIdx] * W.earn);
       coins += bonus;
@@ -771,6 +800,31 @@ window.addEventListener('error', function (e) {
     }
   }
 
+  var FIRE_COLS = ['#ff3b30', '#ff9500', '#ffd60a'];
+  function spawnFire() {
+    var sp = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+    var cnt = clamp(Math.round(sp / 25), 2, 6);
+    for (var i = 0; i < cnt && particles.length < 500; i++) {
+      particles.push({ x: ball.x + (Math.random() - 0.5) * 0.5, y: ball.y + (Math.random() - 0.5) * 0.5,
+        vx: -ball.vx * 0.04 + (Math.random() - 0.5) * 4, vy: -ball.vy * 0.04 + (Math.random() - 0.5) * 4,
+        t: 0, life: 0.45 + Math.random() * 0.55, col: FIRE_COLS[Math.floor(Math.random() * 3)], r: 0.25 + Math.random() * 0.3, g: -1, px: 3 });
+    }
+  }
+  function spawnBurst(x, y, perfect) {
+    for (var i = 0; i < (perfect ? 26 : 8); i++) {
+      var a = Math.random() * Math.PI, sp = 3 + Math.random() * 10;
+      particles.push({ x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.7, t: 0, life: 0.5 + Math.random() * 0.4,
+        col: perfect ? FIRE_COLS[Math.floor(Math.random() * 3)] : '#ffffff', r: 0.2 + Math.random() * 0.25, g: 6, px: 3 });
+    }
+  }
+  function spawnCrash(c) {
+    var cols = ['#2fb85f', '#1f8f46', '#7a5230', '#9c6b3f'];
+    for (var i = 0; i < 24; i++) {
+      particles.push({ x: c.x + (Math.random() - 0.5) * 2, y: c.y + (Math.random() - 0.5) * 4, vx: (Math.random() - 0.5) * 16, vy: 2 + Math.random() * 12,
+        t: 0, life: 1.1, col: cols[Math.floor(Math.random() * cols.length)], r: 0.3 + Math.random() * 0.3, g: 14, px: 3 });
+    }
+  }
+
   function update(dt) {
     clock += dt;
     if (state === 'ready') {
@@ -778,9 +832,20 @@ window.addEventListener('error', function (e) {
       var tri = 1 - Math.abs(((swingT * 0.8) % 2) - 1);
       theta = ANG_MIN + (ANG_MAX - ANG_MIN) * tri;
     }
-    if (golfSwing < 1) golfSwing = Math.min(1, golfSwing + dt / 0.3);
+    if (state === 'swing') {
+      swingClock += dt;
+      golfSwing = clamp(swingClock / swingDur, 0, 1);
+      if (swingClock >= swingDur * 0.8) doLaunch();
+    } else if (golfSwing < 1 && state !== 'ready') golfSwing = Math.min(1, golfSwing + dt / swingDur);
     if (state === 'flight') {
-      var scale = ball.t < 3 ? 1 : (ball.t < 8 ? 2 : (ball.t < 20 ? 4 : 8));
+      // Fast-forward the boring high part of a long flight, but never the
+      // landing and roll: the factor eases (no sudden jump near the ground).
+      var bspd = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy), balt = Math.max(ball.y - groundY(W, ball.x), 0), tgt;
+      if (balt > 40) tgt = ball.t < 3 ? 1 : (ball.t < 8 ? 2.5 : 5);
+      else if (balt > 5) tgt = 1.5;
+      else tgt = clamp(bspd / 30, 1, 3);
+      timeScale += (tgt - timeScale) * Math.min(1, dt * 3);
+      var scale = timeScale;
       acc += dt * scale;
       var guard = 0, res = null;
       while (acc >= DT && !res && guard++ < 500) {
@@ -791,6 +856,8 @@ window.addEventListener('error', function (e) {
         if (ball.splash) { spawnSplash(ball.splash.x, ball.splash.y, ball.splash.v); ball.splash = null; }
         if (ball.feather) { spawnFeathers(ball.feather.x, ball.feather.y); ball.feather = null; banner('Ptak! 🐦'); }
       }
+      if (ball.crash) { spawnCrash(ball.crash); ball.crash = null; banner('Drzewo zniszczone! 💥'); }
+      if (ball.fire) spawnFire();
       $('dist-big').textContent = fmt(Math.max(0, ball.x)) + ' m';
       setGoalBar(ball.x);
       if (res) finishShot(res);
@@ -803,6 +870,15 @@ window.addEventListener('error', function (e) {
     // camera: zoom out as the ball climbs so ball and ground stay in frame
     var flying = state === 'flight', gb = groundY(W, ball.x), alt = Math.max(ball.y - gb, 0);
     cam.alt += (alt - cam.alt) * Math.min(1, dt * 6);
+    if (state === 'swing') {
+      var base = readyPpm(), z = 1, imp = swingDur * 0.8;
+      if (swingPerfect) {
+        var zo = 0.45;
+        z = swingClock < zo ? 1 - 0.45 * smooth(swingClock / zo) : 0.55 + 1.3 * smooth((swingClock - zo) / (imp - zo));
+      } else z = 1 + 0.1 * smooth(swingClock / imp);
+      cam.ppm = base * z; cam.x = -0.5 * VW / cam.ppm; cam.y = readyCamY(cam.ppm); cam.curve = 0;
+      return;
+    }
     var ppm, gf, cx;
     if (state === 'ready') {
       ppm = readyPpm(); gf = 0.8; cx = -0.5 * VW / ppm;
@@ -879,6 +955,15 @@ window.addEventListener('error', function (e) {
     if (kind !== 'adobe') { ctx.fillStyle = '#a04030'; ctx.fillRect(sx + w * 0.22, sy - h - 2.6 * s, 0.9 * s, 1.6 * s); }
   }
 
+  // Club angle over the swing: address (t<0), back-swing, down-swing hitting the
+  // ball at t=0.8, then follow-through.
+  function clubAngle(t) {
+    if (t < 0) return -0.29;
+    if (t < 0.55) return -0.29 + 3.0 * (1 - Math.pow(1 - t / 0.55, 2));
+    if (t < 0.8) { var u = (t - 0.55) / 0.25; return 2.71 - 3.0 * u * u; }
+    return -0.29 - 1.7 * smooth((t - 0.8) / 0.2);
+  }
+
   // Cartoon golfer (facing right). u = pixels per metre; feet at (sx, sy).
   function drawGolfer(sx, sy, u, skin, t) {
     ctx.save();
@@ -919,7 +1004,7 @@ window.addEventListener('error', function (e) {
     ctx.fillStyle = skin.cap; ctx.beginPath(); ctx.arc(0.08 * u, -3.65 * u, 0.66 * u, Math.PI, 2 * Math.PI); ctx.closePath(); ctx.fill();
     ctx.beginPath(); ctx.ellipse(0.55 * u, -3.72 * u, 0.5 * u, 0.09 * u, 0.05, 0, Math.PI * 2); ctx.fill();
     // club (back-swing -> through impact -> follow-through)
-    var ang = t >= 1 ? 0.55 : (-2.4 + t * 3.3);
+    var ang = clubAngle(t);
     ctx.translate(0.78 * u, -1.5 * u);
     ctx.rotate(ang);
     ctx.strokeStyle = '#c3ccd4'; ctx.lineWidth = Math.max(2, 0.1 * u);
@@ -1063,7 +1148,7 @@ window.addEventListener('error', function (e) {
     }
 
     var x0 = cam.x, x1 = cam.x + VW / ppm;
-    var k0 = Math.max(1, Math.floor(x0 / CHUNK) - 1), k1 = Math.floor(x1 / CHUNK) + 1;
+    var k0 = Math.max(0, Math.floor(x0 / CHUNK) - 1), k1 = Math.floor(x1 / CHUNK) + 1;
 
     // --- scenery behind the fairway: houses and background trees ---
     for (k = k0; k <= k1; k++) {
@@ -1071,7 +1156,9 @@ window.addEventListener('error', function (e) {
       for (i = 0; i < sc.length; i++) {
         var o = sc[i], oy = syw(groundY(W, o.x) + 0.4, o.x);
         if (o.type === 'house') drawHouse(W.house, o.v, sx(o.x), oy, ppm * 0.9);
-        else drawTree(W.tree, sx(o.x), oy, 2.4 * o.s, 7 * o.s, ppm);
+        else { // faded and smaller than the real (solid) trees, so they read as background
+          ctx.globalAlpha = 0.55; drawTree(W.tree, sx(o.x), oy, 2.4 * o.s * 0.7, 7 * o.s * 0.7, ppm); ctx.globalAlpha = 1;
+        }
       }
     }
 
@@ -1140,7 +1227,7 @@ window.addEventListener('error', function (e) {
       fs = chunkFeatures(W, k);
       for (i = 0; i < fs.length; i++) {
         f = fs[i];
-        if (f.type === 'tree') drawTree(W.tree, sx(f.x), syw(f.gy, f.x), f.w, f.h, ppm);
+        if (f.type === 'tree') { if (!ball.destroyed[f.id]) drawTree(W.tree, sx(f.x), syw(f.gy, f.x), f.w, f.h, ppm); }
         else if (f.type === 'pole') {
           ctx.strokeStyle = '#dfe6ea'; ctx.lineWidth = Math.max(2, f.w * ppm);
           ctx.beginPath(); ctx.moveTo(sx(f.x), syw(f.gy, f.x)); ctx.lineTo(sx(f.x), syw(f.gy + f.h, f.x)); ctx.stroke();
@@ -1178,7 +1265,7 @@ window.addEventListener('error', function (e) {
     if (sx(0) > -200 && sx(0) < VW + 200) {
       var ty0 = syw(0, 0);
       ctx.fillStyle = '#f7f2e8'; ctx.beginPath(); ctx.moveTo(sx(0) - 0.12 * ppm, ty0); ctx.lineTo(sx(0) + 0.12 * ppm, ty0); ctx.lineTo(sx(0) + 0.05 * ppm, ty0 - 0.35 * ppm); ctx.lineTo(sx(0) - 0.05 * ppm, ty0 - 0.35 * ppm); ctx.closePath(); ctx.fill();
-      drawGolfer(sx(-1.25), syw(0, -1.25) + 2, Math.max(8, ppm), SKINS[save.skins.sel], golfSwing);
+      drawGolfer(sx(-1.25), syw(0, -1.25) + 2, Math.max(8, ppm), SKINS[save.skins.sel], state === 'ready' ? -1 : golfSwing);
     }
 
     // --- trail, particles, ball ---
@@ -1187,6 +1274,11 @@ window.addEventListener('error', function (e) {
       ctx.beginPath(); ctx.arc(sx(trail[i].x), syw(trail[i].y, trail[i].x), 2.5, 0, Math.PI * 2); ctx.fill();
     }
     var br = Math.max(0.4 * ppm, 6), bx = sx(ball.x), by = syw(ball.y, ball.x) - br * 0.6;
+    if (ball.fire) { // burning ball glow
+      var fg = ctx.createRadialGradient(bx, by, br * 0.3, bx, by, br * 3.4);
+      fg.addColorStop(0, 'rgba(255,210,60,0.95)'); fg.addColorStop(0.5, 'rgba(255,110,20,0.5)'); fg.addColorStop(1, 'rgba(255,60,0,0)');
+      ctx.fillStyle = fg; ctx.fillRect(bx - br * 3.4, by - br * 3.4, br * 6.8, br * 6.8);
+    }
     ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(bx, syw(groundY(W, ball.x), ball.x) + 1, br, br * 0.3, 0, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = curBall().color; ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1.5; ctx.stroke();
@@ -1194,7 +1286,7 @@ window.addEventListener('error', function (e) {
     for (i = 0; i < particles.length; i++) {
       var pt = particles[i];
       ctx.globalAlpha = clamp(1 - pt.t / pt.life, 0, 1);
-      ctx.fillStyle = pt.col; ctx.beginPath(); ctx.arc(sx(pt.x), syw(pt.y, pt.x), Math.max(2, pt.r * ppm), 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = pt.col; ctx.beginPath(); ctx.arc(sx(pt.x), syw(pt.y, pt.x), Math.max(pt.px || 2, pt.r * ppm), 0, Math.PI * 2); ctx.fill();
     }
     ctx.globalAlpha = 1;
 
@@ -1211,7 +1303,7 @@ window.addEventListener('error', function (e) {
     }
 
     // --- swing gauge next to the ball ---
-    if (state === 'ready') {
+    if (state === 'ready' || state === 'swing') {
       var R = clamp(0.34 * VH, 80, 0.46 * VW);
       drawGauge(bx + 10, by + br * 0.4, R, theta);
     }
@@ -1442,7 +1534,7 @@ window.addEventListener('error', function (e) {
   function anyModal() { return $('shop').classList.contains('is-open') || $('wheelm').classList.contains('is-open'); }
   function tap() {
     if (anyModal() || performance.now() < readyAt) return;
-    if (state === 'ready') launch();
+    if (state === 'ready') beginSwing();
     else if (state === 'result' && !$('result').classList.contains('is-visible')) resetShot(); // after the upgrade detour
   }
   cv.addEventListener('pointerdown', function (e) { e.preventDefault(); tap(); });
@@ -1487,7 +1579,6 @@ window.addEventListener('error', function (e) {
 
   refreshMenu();
   requestAnimationFrame(frame);
-
 })();
 </script>
 </body>
