@@ -179,6 +179,7 @@ window.addEventListener('error', function (e) {
       <div class="r-lines" id="r-lines"></div>
       <div class="r-buttons">
         <button class="btn btn--green" id="r-next" type="button">Dalej →</button>
+        <button class="btn" id="r-putt" type="button" style="display:none">⛳ Dobitka</button>
         <button class="btn" id="r-shop" type="button">Ulepsz</button>
       </div>
     </div>
@@ -339,6 +340,8 @@ window.addEventListener('error', function (e) {
     return list;
   }
 
+  var GREEN_R = 6; // lighter putting green around each hole (flat, you can finish with a putt)
+
   function applyZone(y, x, a, b, level, isWater) {
     var d = x < a ? a - x : (x > b ? x - b : 0);
     if (d >= 9) return y;
@@ -361,7 +364,7 @@ window.addEventListener('error', function (e) {
         if (f.type === 'water' || f.type === 'sand') y = applyZone(y, x, f.a, f.b, f.level, f.type === 'water');
       }
     }
-    for (var h = 0; h < W.holes.length; h++) y = applyZone(y, x, W.holes[h] - 3, W.holes[h] + 3, W.holeY[h], false);
+    for (var h = 0; h < W.holes.length; h++) y = applyZone(y, x, W.holes[h] - GREEN_R, W.holes[h] + GREEN_R, W.holeY[h], false);
     return y;
   }
 
@@ -461,7 +464,8 @@ window.addEventListener('error', function (e) {
         if (vn > -1.5) e = 0;
         b.vx -= (1 + e) * vn * nx; b.vy -= (1 + e) * vn * ny;
         var tx0 = ny, ty0 = -nx;
-        var vt0 = (b.vx * tx0 + b.vy * ty0) * (1 - Math.min(0.5, 0.04 + 0.06 * mu));
+        var kd = (b.putt && vn > -1.5) ? 0 : Math.min(0.5, 0.04 + 0.06 * mu); // a putt just rolls: no impact damping
+        var vt0 = (b.vx * tx0 + b.vy * ty0) * (1 - kd);
         var vn0 = b.vx * nx + b.vy * ny;
         b.vx = vt0 * tx0 + vn0 * nx; b.vy = vt0 * ty0 + vn0 * ny;
       }
@@ -474,7 +478,7 @@ window.addEventListener('error', function (e) {
       if (sp < 0.35) b.rest += h; else b.rest = 0;
 
       for (var hi = 0; hi < W.holes.length; hi++) {
-        if (Math.abs(b.x - W.holes[hi]) < 0.9 && sp < 10) { b.holeIdx = hi; return 'hole'; }
+        if (Math.abs(b.x - W.holes[hi]) < 0.9 && sp < (b.putt ? 6 : 10)) { b.holeIdx = hi; return 'hole'; }
       }
     } else {
       b.rest = 0;
@@ -655,6 +659,7 @@ window.addEventListener('error', function (e) {
   var swingT = 0, theta = ANG_CENTER, lastZone = ZONES[0], golfSwing = 1, acc = 0, trail = [], trailT = 0;
   var swingClock = 0, swingDur = 0.85, swingPerfect = false, swingTheta = ANG_CENTER, timeScale = 1;
   var readyAt = 0, clock = 0, particles = [], goalPulse = 0;
+  var puttT = 0, puttInfo = null; // putt aiming: power meter clock + {hi, dir, lo, up, vmax, d}
   var stars = [], i0;
   for (i0 = 0; i0 < 120; i0++) stars.push({ x: hash(i0, 1, 1), y: hash(i0, 2, 2), r: 0.6 + hash(i0, 3, 3) * 1.4 });
 
@@ -700,6 +705,7 @@ window.addEventListener('error', function (e) {
     var ppm = readyPpm();
     cam.ppm = ppm; cam.x = -0.5 * VW / ppm; cam.y = readyCamY(ppm);
     $('result').classList.remove('is-visible');
+    offerPutt(false);
     $('ui').classList.remove('in-flight');
     $('dist-big').textContent = '0 m';
     setGoalBar(0);
@@ -732,6 +738,65 @@ window.addEventListener('error', function (e) {
     acc = 0; trail = []; timeScale = 1;
     banner(lastZone.name);
     spawnBurst(ball.x, ball.y, swingPerfect);
+  }
+
+  // index of the hole whose green the ball is resting on (or -1)
+  function greenIdx(x) {
+    for (var gi = 0; gi < W.holes.length; gi++) if (Math.abs(x - W.holes[gi]) <= GREEN_R) return gi;
+    return -1;
+  }
+
+  // Show/hide the putt button depending on whether the ball sits on a green.
+  function offerPutt(on) {
+    $('r-putt').style.display = on ? '' : 'none';
+    $('r-next').textContent = on ? 'Poddaję się' : 'Dalej →';
+  }
+
+  function startPutt() {
+    var hi = greenIdx(ball.x);
+    if (hi < 0) return;
+    var hx = W.holes[hi], d = Math.abs(hx - ball.x), a = Math.max(0.05, P.muScale * W.mu * W.g);
+    var lo = Math.sqrt(2 * a * Math.max(d - 0.9, 0.01)) * 1.04, up = Math.sqrt(36 + 2 * a * (d + 0.9)) * 0.96;
+    puttInfo = { hi: hi, dir: hx >= ball.x ? 1 : -1, lo: lo, up: up, vmax: up * 1.5, d: d };
+    ball.vx = 0; ball.vy = 0; ball.rest = 0; ball.t = 0; ball.fire = false; ball.putt = false; ball.holeIdx = -1;
+    puttT = 0; trail = []; particles = [];
+    state = 'putt';
+    readyAt = performance.now() + 350;
+    $('result').classList.remove('is-visible');
+    $('ui').classList.add('in-flight');
+    banner('Dobitka! Dotknij, gdy znacznik jest w zielonym');
+  }
+
+  function puttPower() { return 1 - Math.abs(((puttT * 0.9) % 2) - 1); }
+
+  function doPutt() {
+    var v = puttPower() * puttInfo.vmax;
+    ball.vx = puttInfo.dir * v; ball.vy = 0; ball.rest = 0; ball.t = 0; ball.putt = true;
+    state = 'flight'; acc = 0; timeScale = 1;
+  }
+
+  function finishPutt(res) {
+    state = 'result';
+    $('ui').classList.remove('in-flight');
+    var lines = [], title;
+    if (res === 'hole') {
+      var bonus = Math.round(HOLE_BONUS[ball.holeIdx] * W.earn * 0.6);
+      save.coins += bonus; writeSave(); updateHud();
+      title = 'Dobitka! ⛳';
+      lines.push('Piłka wpadła do dołka <b>' + HOLE_NAMES[ball.holeIdx] + '</b>: <b>+' + fmt(bonus) + ' 🪙</b>');
+      offerPutt(false);
+    } else if (res !== 'water' && greenIdx(ball.x) >= 0) {
+      title = 'Prawie! 😬';
+      lines.push('Piłka została na zielonym — spróbuj jeszcze raz albo się poddaj.');
+      offerPutt(true);
+    } else {
+      title = 'Pudło';
+      lines.push(res === 'water' ? 'Piłka wpadła do wody 💦' : 'Piłka wytoczyła się poza zielone.');
+      offerPutt(false);
+    }
+    $('r-title').textContent = title;
+    $('r-lines').innerHTML = lines.join('<br>');
+    $('result').classList.add('is-visible');
   }
 
   function finishShot(res) {
@@ -783,6 +848,9 @@ window.addEventListener('error', function (e) {
     writeSave();
     updateHud();
     $('r-title').textContent = title;
+    var onGreen = res === 'stop' && greenIdx(ball.x) >= 0;
+    if (onGreen) lines.push('⛳ Piłka na zielonym! Możesz zrobić <b>dobitkę</b>.');
+    offerPutt(onGreen);
     $('r-lines').innerHTML = lines.join('<br>');
     $('result').classList.add('is-visible');
   }
@@ -832,6 +900,7 @@ window.addEventListener('error', function (e) {
       var tri = 1 - Math.abs(((swingT * 0.8) % 2) - 1);
       theta = ANG_MIN + (ANG_MAX - ANG_MIN) * tri;
     }
+    if (state === 'putt') puttT += dt;
     if (state === 'swing') {
       swingClock += dt;
       golfSwing = clamp(swingClock / swingDur, 0, 1);
@@ -860,7 +929,7 @@ window.addEventListener('error', function (e) {
       if (ball.fire) spawnFire();
       $('dist-big').textContent = fmt(Math.max(0, ball.x)) + ' m';
       setGoalBar(ball.x);
-      if (res) finishShot(res);
+      if (res) { if (ball.putt) finishPutt(res); else finishShot(res); }
     }
     for (var pi = particles.length - 1; pi >= 0; pi--) {
       var pt = particles[pi];
@@ -882,6 +951,9 @@ window.addEventListener('error', function (e) {
     var ppm, gf, cx;
     if (state === 'ready') {
       ppm = readyPpm(); gf = 0.8; cx = -0.5 * VW / ppm;
+    } else if (state === 'putt') { // frame the ball and the hole
+      ppm = clamp(VW / (puttInfo.d + 14), 10, 60); gf = 0.7;
+      cx = (ball.x + W.holes[puttInfo.hi]) / 2 - 0.5 * VW / ppm;
     } else {
       ppm = Math.min(VW / 26, 0.72 * VH / (alt + 8));
       gf = 0.66 + 0.2 * clamp(alt / 25, 0, 1);
@@ -1225,6 +1297,18 @@ window.addEventListener('error', function (e) {
       ctx.strokeStyle = 'rgba(150,215,255,' + (0.35 * curve) + ')'; ctx.lineWidth = 16 + 18 * curve; ctx.stroke();
     }
 
+    // --- putting greens: a lighter, flat patch around every hole ---
+    for (i = 0; i < W.holes.length; i++) {
+      var ga = W.holes[i] - GREEN_R, gb2 = W.holes[i] + GREEN_R;
+      if (gb2 < x0 - 2 || ga > x1 + 2) continue;
+      var gstep = Math.max(0.4, 3 / ppm), gxs;
+      ctx.beginPath();
+      for (gxs = ga; gxs <= gb2 + 0.01; gxs += gstep) { if (gxs === ga) ctx.moveTo(sx(gxs), syw(groundY(W, gxs), gxs)); else ctx.lineTo(sx(gxs), syw(groundY(W, gxs), gxs)); }
+      for (gxs = gb2; gxs >= ga - 0.01; gxs -= gstep) ctx.lineTo(sx(gxs), syw(groundY(W, gxs) - 1.4, gxs));
+      ctx.closePath(); ctx.fillStyle = mix(W.ground[0], '#ffffff', 0.24); ctx.fill();
+      ctx.strokeStyle = mix(W.ground[1], '#ffffff', 0.5); ctx.lineWidth = Math.max(2, ppm * 0.2); ctx.stroke();
+    }
+
     // --- sand bunkers and pond surfaces ---
     for (k = k0; k <= k1; k++) {
       fs = chunkFeatures(W, k);
@@ -1327,6 +1411,18 @@ window.addEventListener('error', function (e) {
         var tsx = sx(tx), tsy = syw(groundY(W, tx), tx), th = (0.3 + hash(j, 6, 6) * 0.4) * Math.min(ppm, 40);
         ctx.beginPath(); ctx.moveTo(tsx, tsy + 1); ctx.lineTo(tsx - 3, tsy - th); ctx.moveTo(tsx, tsy + 1); ctx.lineTo(tsx + 3, tsy - th * 1.2); ctx.moveTo(tsx, tsy + 1); ctx.lineTo(tsx, tsy - th * 1.4); ctx.stroke();
       }
+    }
+
+    // --- putt power meter ---
+    if (state === 'putt' && puttInfo) {
+      var mw = Math.min(0.56 * VW, 340), mh = 24, mx0 = (VW - mw) / 2, my0 = VH * 0.82;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(mx0 - 4, my0 - 4, mw + 8, mh + 8);
+      ctx.fillStyle = '#e8453c'; ctx.fillRect(mx0, my0, mw, mh);
+      ctx.fillStyle = '#35d36b'; ctx.fillRect(mx0 + mw * puttInfo.lo / puttInfo.vmax, my0, mw * (puttInfo.up - puttInfo.lo) / puttInfo.vmax, mh);
+      var mk = mx0 + mw * puttPower();
+      ctx.fillStyle = '#fff'; ctx.fillRect(mk - 3, my0 - 8, 6, mh + 16);
+      ctx.font = '900 14px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff';
+      ctx.fillText('DOBITKA — dotknij, gdy znacznik jest w zielonym', VW / 2, my0 - 14);
     }
 
     // --- swing gauge next to the ball ---
@@ -1562,6 +1658,7 @@ window.addEventListener('error', function (e) {
   function tap() {
     if (anyModal() || performance.now() < readyAt) return;
     if (state === 'ready') beginSwing();
+    else if (state === 'putt') doPutt();
     else if (state === 'result' && !$('result').classList.contains('is-visible')) resetShot(); // after the upgrade detour
   }
   cv.addEventListener('pointerdown', function (e) { e.preventDefault(); tap(); });
@@ -1589,6 +1686,7 @@ window.addEventListener('error', function (e) {
   $('wheel-close').addEventListener('click', closeWheel);
   $('wheel-spin').addEventListener('click', spinWheel);
   $('r-next').addEventListener('click', function () { resetShot(); });
+  $('r-putt').addEventListener('click', startPutt);
   window.addEventListener('resize', resize);
   setInterval(function () { if ($('screen-game').classList.contains('is-active')) updateGift(); }, 1000);
 
