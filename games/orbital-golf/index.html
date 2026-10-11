@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Orbitalny Golf</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; overscroll-behavior: none; }
+  body { display: flex; flex-direction: column; background: #0a1220; color: #eef3fb; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+
+  .screen { display: none; flex: 1; min-height: 0; flex-direction: column; }
+  .screen.is-active { display: flex; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.65rem 1.2rem; border-radius: 10px; border: none; font-size: 0.92rem; font-weight: 700; cursor: pointer; background: #f1c40f; color: #2a2100; font-family: inherit; }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+  .btn--ghost { background: transparent; border: 1px solid #2c4263; color: #d5e2f5; }
+  .btn--green { background: #2ecc71; color: #052512; }
+  .btn--small { padding: 0.35rem 0.7rem; font-size: 0.74rem; border-radius: 8px; }
+
+  #screen-menu { align-items: center; justify-content: center; gap: 0.9rem; padding: 1.2rem; text-align: center; overflow: auto; }
+  #screen-menu h1 { margin: 0; font-size: 1.9rem; }
+  #screen-menu p { margin: 0; color: #8ea5c6; font-size: 0.86rem; max-width: 340px; line-height: 1.5; }
+  #menu-stats { color: #f1c40f; font-size: 0.9rem; font-weight: 600; min-height: 1.3em; }
+  #screen-menu .btn { min-width: 220px; }
+
+  #hud { display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0.7rem; background: #070d18; border-bottom: 1px solid #1c2c45; font-size: 0.8rem; gap: 0.5rem; }
+  #hud-left { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+  #hud-world { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #hud-best { color: #8ea5c6; font-size: 0.7rem; }
+  #hud-right { display: flex; gap: 0.8rem; font-weight: 700; font-size: 0.95rem; }
+  #hud-coins { color: #f1c40f; }
+  #hud-gems { color: #5dade2; }
+
+  #stage { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+  #cv { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #dist { position: absolute; top: 0.6rem; left: 50%; transform: translateX(-50%); font-size: 1.5rem; font-weight: 800; text-shadow: 0 2px 6px rgba(0,0,0,0.6); pointer-events: none; }
+  #banner { position: absolute; top: 24%; left: 50%; transform: translate(-50%, 0); font-size: 1.7rem; font-weight: 800; text-shadow: 0 2px 8px rgba(0,0,0,0.7); pointer-events: none; opacity: 0; transition: opacity 0.25s, transform 0.25s; white-space: nowrap; color: #fff; }
+  #banner.is-visible { opacity: 1; transform: translate(-50%, -8px); }
+
+  #meter-wrap { position: absolute; left: 50%; bottom: 0.9rem; transform: translateX(-50%); width: min(86%, 340px); text-align: center; pointer-events: none; }
+  #meter { position: relative; height: 20px; border-radius: 999px; background: rgba(0,0,0,0.55); border: 2px solid rgba(255,255,255,0.35); overflow: hidden; }
+  #sweet { position: absolute; top: 0; bottom: 0; background: #2ecc71; opacity: 0.85; }
+  #needle { position: absolute; top: -2px; bottom: -2px; width: 4px; margin-left: -2px; background: #fff; border-radius: 2px; box-shadow: 0 0 6px #fff; left: 0; }
+  #meter-label { margin-top: 0.4rem; font-size: 0.82rem; font-weight: 700; text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+
+  #result { position: absolute; left: 50%; bottom: 0.8rem; transform: translateX(-50%); width: min(92%, 380px); background: rgba(7,13,24,0.95); border: 1px solid #25395a; border-radius: 14px; padding: 0.9rem 1rem; text-align: center; display: none; }
+  #result.is-visible { display: block; }
+  #result h2 { margin: 0 0 0.3rem; font-size: 1.4rem; }
+  #result .r-lines { font-size: 0.82rem; color: #a9bcd8; line-height: 1.6; margin-bottom: 0.7rem; }
+  #result .r-lines b { color: #f1c40f; }
+  #result .r-buttons { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
+
+  #bottombar { display: flex; gap: 0.5rem; padding: 0.45rem 0.7rem calc(0.45rem + env(safe-area-inset-bottom)); background: #070d18; border-top: 1px solid #1c2c45; }
+  #bottombar .btn { flex: 1; padding: 0.65rem 0.4rem; font-size: 0.85rem; }
+
+  .modal { position: absolute; left: 0; right: 0; top: 0; bottom: 0; background: rgba(6,11,20,0.97); display: none; flex-direction: column; z-index: 20; }
+  .modal.is-open { display: flex; }
+  .modal-head { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.8rem; border-bottom: 1px solid #1c2c45; font-weight: 700; }
+  .tabs { display: flex; gap: 0.35rem; padding: 0.5rem 0.7rem 0; flex-wrap: wrap; }
+  .tab { padding: 0.4rem 0.75rem; border-radius: 8px; border: 1px solid #2c4263; background: transparent; color: #a9bcd8; font-size: 0.78rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .tab.is-active { background: #f1c40f; color: #2a2100; border-color: #f1c40f; }
+  .modal-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0.7rem; display: flex; flex-direction: column; gap: 0.55rem; }
+  .row { display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem; border: 1px solid #22385a; border-radius: 12px; background: #0e1a2e; }
+  .row.is-sel { border-color: #2ecc71; }
+  .row .ico { font-size: 1.5rem; width: 2rem; text-align: center; flex-shrink: 0; }
+  .row .info { flex: 1; min-width: 0; font-size: 0.8rem; line-height: 1.35; }
+  .row .info b { font-size: 0.92rem; }
+  .row .info span { color: #8ea5c6; display: block; }
+  .swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.7); flex-shrink: 0; }
+
+  #wheel-area { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; padding: 0.5rem; }
+  #wheel-box { position: relative; width: 250px; height: 250px; }
+  #wheel { width: 250px; height: 250px; border-radius: 50%; border: 4px solid #f1c40f; position: relative; transition: transform 4s cubic-bezier(0.12, 0.7, 0.1, 1); }
+  .wheel-label { position: absolute; left: 50%; top: 50%; font-size: 0.8rem; font-weight: 800; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.7); width: 60px; margin-left: -30px; margin-top: -9px; text-align: center; }
+  #wheel-pointer { position: absolute; top: -12px; left: 50%; margin-left: -12px; width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 24px solid #fff; z-index: 2; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
+  #wheel-msg { min-height: 1.4em; font-weight: 700; color: #f1c40f; text-align: center; }
+</style>
+</head>
+<body>
+
+<div id="boot-error"></div>
+<script>
+// Registered before the game script so a parse/runtime error shows up on the
+// page instead of leaving a silent blank screen (no console on a phone).
+window.addEventListener('error', function (e) {
+  var box = document.getElementById('boot-error');
+  if (!box) return;
+  box.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#1a0a0a;color:#ff8a8a;' +
+    'font:13px/1.5 -apple-system,sans-serif;padding:1.2rem;overflow:auto;white-space:pre-wrap;';
+  box.textContent = '⚠️ Błąd uruchamiania gry:\n\n' + (e.message || 'Nieznany błąd') +
+    (e.filename ? '\n' + e.filename + ':' + e.lineno + ':' + e.colno : '') +
+    '\n\nPrześlij ten tekst, żeby dało się to naprawić.';
+});
+</script>
+
+<section id="screen-menu" class="screen is-active">
+  <h1>⛳🚀 Orbitalny Golf</h1>
+  <p>Złap moment na pasku siły i wystrzel piłkę jak najdalej. Zbieraj monety, ulepszaj uderzenie, odblokowuj nowe światy — aż do orbity! Postęp zapisuje się sam.</p>
+  <div id="menu-stats"></div>
+  <button class="btn" id="btn-play" type="button">▶ Graj</button>
+  <button class="btn btn--ghost" id="btn-reset" type="button">Zresetuj postęp</button>
+</section>
+
+<section id="screen-game" class="screen">
+  <div id="hud">
+    <div id="hud-left"><span id="hud-world"></span><span id="hud-best"></span></div>
+    <div id="hud-right"><span id="hud-coins">🪙 0</span><span id="hud-gems">💎 0</span></div>
+  </div>
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="dist"></div>
+    <div id="banner"></div>
+    <div id="meter-wrap">
+      <div id="meter"><div id="sweet"></div><div id="needle"></div></div>
+      <div id="meter-label"></div>
+    </div>
+    <div id="result">
+      <h2 id="r-title"></h2>
+      <div class="r-lines" id="r-lines"></div>
+      <div class="r-buttons">
+        <button class="btn btn--green" id="r-next" type="button">Dalej →</button>
+        <button class="btn btn--ghost" id="r-shop" type="button">Ulepsz</button>
+      </div>
+    </div>
+
+    <div class="modal" id="shop">
+      <div class="modal-head"><span>Sklep</span><button class="btn btn--ghost btn--small" id="shop-close" type="button">Zamknij ✕</button></div>
+      <div class="tabs" id="shop-tabs"></div>
+      <div class="modal-body" id="shop-body"></div>
+    </div>
+
+    <div class="modal" id="wheelm">
+      <div class="modal-head"><span>Koło szczęścia 🎡</span><button class="btn btn--ghost btn--small" id="wheel-close" type="button">Zamknij ✕</button></div>
+      <div class="modal-body">
+        <div id="wheel-area">
+          <div id="wheel-box"><div id="wheel-pointer"></div><div id="wheel"></div></div>
+          <div id="wheel-msg"></div>
+          <button class="btn" id="wheel-spin" type="button">Zakręć!</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="bottombar">
+    <button class="btn" id="b-shop" type="button">🛒 Sklep</button>
+    <button class="btn" id="b-wheel" type="button">🎡 Koło</button>
+    <button class="btn btn--ghost" id="b-menu" type="button">Menu</button>
+  </div>
+</section>
+
+<script>
+(function () {
+  var DT = 1 / 120, MAXLV = 40, CHUNK = 60, LAUNCH_DEG = 46, BALL_R = 0.3;
+
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function smooth(t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
+  function hash(a, b, c) {
+    var h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul((c | 0) + 1, 2147483629);
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  }
+
+  // ---------- Worlds ----------
+  // g gravity, drag air resistance, mu rolling friction (surface / sand), e bounce
+  // (surface / sand). A*/f*/p* shape the rolling hills. hz = chance per 60 m chunk
+  // of each hazard. holes = cup distances (birdie, eagle, albatros).
+  var WORLDS = [
+    { id: 'meadow', name: 'Łąka', g: 9.8, drag: 0.035, mu: 0.32, muSand: 1.7, e: 0.5, eSand: 0.06, skip: true,
+      A1: 2.5, f1: 0.040, p1: 0.3, A2: 1.2, f2: 0.103, p2: 1.1, A3: 3.5, f3: 0.021, p3: 2.0,
+      hz: { water: 0.14, sand: 0.2, trees: 0.25, pole: 0.1 }, tree: 'tree',
+      sky: ['#5dade2', '#d6eaf8'], ground: ['#3d9a47', '#56b85f'], sandColor: '#e6c883', waterColor: '#2e86de',
+      earn: 1, orbit: 1500, holes: [120, 420, 1100], spaceAlt: 700 },
+    { id: 'desert', name: 'Pustynia', g: 9.8, drag: 0.035, mu: 0.45, muSand: 1.7, e: 0.42, eSand: 0.08, skip: true,
+      A1: 3.2, f1: 0.034, p1: 1.4, A2: 1.6, f2: 0.09, p2: 0.2, A3: 4.0, f3: 0.017, p3: 0.5,
+      hz: { water: 0.08, sand: 0.4, trees: 0.25, pole: 0.1 }, tree: 'cactus',
+      sky: ['#e59866', '#fdebd0'], ground: ['#c9a45c', '#dcb96e'], sandColor: '#f0d58c', waterColor: '#16a085',
+      earn: 2.2, orbit: 5000, holes: [250, 900, 2800], spaceAlt: 900 },
+    { id: 'snow', name: 'Śnieżna kraina', g: 9.8, drag: 0.03, mu: 0.07, muSand: 0.9, e: 0.45, eSand: 0.1, skip: true,
+      A1: 2.8, f1: 0.038, p1: 2.2, A2: 1.4, f2: 0.11, p2: 0.9, A3: 3.8, f3: 0.02, p3: 1.2,
+      hz: { water: 0.14, sand: 0.2, trees: 0.3, pole: 0.1 }, tree: 'pine',
+      sky: ['#85c1e9', '#eaf2f8'], ground: ['#d6e4f0', '#f4f9fd'], sandColor: '#aed6f1', waterColor: '#5499c7',
+      earn: 4, orbit: 10000, holes: [400, 1500, 5500], spaceAlt: 1000 },
+    { id: 'moon', name: 'Księżyc', g: 1.62, drag: 0.0, mu: 0.35, muSand: 1.2, e: 0.5, eSand: 0.1, skip: false,
+      A1: 4.5, f1: 0.03, p1: 0.7, A2: 2.0, f2: 0.08, p2: 2.5, A3: 6.0, f3: 0.015, p3: 1.9,
+      hz: { water: 0.14, sand: 0.2, trees: 0.25, pole: 0.1 }, tree: 'rock',
+      sky: ['#05070f', '#0e1424'], ground: ['#8a8d94', '#a9acb3'], sandColor: '#6b6e75', waterColor: '#1b1f2a',
+      earn: 8, orbit: 40000, holes: [1500, 8000, 25000], spaceAlt: 0 },
+  ];
+  WORLDS.forEach(function (W) {
+    W.holeY = W.holes.map(function (hx) { return baseHeight(W, hx); });
+    W.cache = {};
+  });
+
+  function baseHeight(W, x) {
+    if (x <= 0) return 0;
+    var a = smooth(x / 50);
+    return a * (W.A1 * Math.sin(x * W.f1 + W.p1) + W.A2 * Math.sin(x * W.f2 + W.p2) + W.A3 * Math.sin(x * W.f3 + W.p3));
+  }
+
+  function nearHole(W, a, b) {
+    for (var i = 0; i < W.holes.length; i++) if (W.holes[i] > a - 14 && W.holes[i] < b + 14) return true;
+    return false;
+  }
+
+  // Hazards are generated lazily per 60 m chunk from a hash, so the course
+  // is endless and identical every time.
+  function chunkFeatures(W, k) {
+    var c = W.cache[k];
+    if (c) return c;
+    var list = [];
+    if (k >= 2) { // first 120 m are hazard-free so a beginner's first shots can land
+      var r = hash(k, W.id.length * 31 + W.g, 1), start = k * CHUNK + 8 + hash(k, 7, 2) * 20;
+      var hz = W.hz, acc = 0, kind = 'none';
+      if (r < (acc += hz.water)) kind = 'water';
+      else if (r < (acc += hz.sand)) kind = 'sand';
+      else if (r < (acc += hz.trees)) kind = 'trees';
+      else if (r < (acc += hz.pole)) kind = 'pole';
+      var len = 12 + hash(k, 5, 3) * 16;
+      if (kind === 'water' || kind === 'sand') {
+        if (!nearHole(W, start, start + len)) {
+          var lvl = baseHeight(W, start + len / 2) - (kind === 'water' ? 0.3 : 0);
+          list.push({ type: kind, a: start, b: start + len, level: lvl });
+        }
+      } else if (kind === 'trees') {
+        var n = 1 + Math.floor(hash(k, 9, 4) * 3), px = start;
+        for (var i = 0; i < n; i++) {
+          px += 3 + hash(k, i, 5) * 5;
+          if (nearHole(W, px, px)) continue;
+          list.push({ type: 'tree', x: px, w: 1.4, h: 6 + hash(k, i, 6) * 4, gy: baseHeight(W, px) });
+        }
+      } else if (kind === 'pole') {
+        var pxx = start + 10;
+        if (!nearHole(W, pxx, pxx)) list.push({ type: 'pole', x: pxx, w: 0.5, h: 14, gy: baseHeight(W, pxx) });
+      }
+    }
+    W.cache[k] = list;
+    return list;
+  }
+
+  function applyZone(y, x, a, b, level, isWater) {
+    var d = x < a ? a - x : (x > b ? x - b : 0);
+    if (d >= 9) return y;
+    if (isWater && d <= 0) {
+      var t = (x - a) / (b - a);
+      return level - 2.6 * Math.pow(Math.sin(Math.PI * t), 0.7);
+    }
+    var w = d <= 0 ? 1 : smooth(1 - d / 9);
+    return y + (level - y) * w;
+  }
+
+  function groundY(W, x) {
+    var y = baseHeight(W, x);
+    var k = Math.floor(x / CHUNK);
+    for (var kk = k - 1; kk <= k + 1; kk++) {
+      if (kk < 1) continue;
+      var fs = chunkFeatures(W, kk);
+      for (var i = 0; i < fs.length; i++) {
+        var f = fs[i];
+        if (f.type === 'water' || f.type === 'sand') y = applyZone(y, x, f.a, f.b, f.level, f.type === 'water');
+      }
+    }
+    for (var h = 0; h < W.holes.length; h++) y = applyZone(y, x, W.holes[h] - 3, W.holes[h] + 3, W.holeY[h], false);
+    return y;
+  }
+
+  function surfaceAt(W, x) {
+    var k = Math.floor(x / CHUNK);
+    for (var kk = k - 1; kk <= k + 1; kk++) {
+      if (kk < 1) continue;
+      var fs = chunkFeatures(W, kk);
+      for (var i = 0; i < fs.length; i++) {
+        var f = fs[i];
+        if ((f.type === 'water' || f.type === 'sand') && x >= f.a && x <= f.b) return f;
+      }
+    }
+    return null;
+  }
+
+  // ---------- Physics ----------
+
+  function makeBall() { return { x: 0, y: 0.3, vx: 0, vy: 0, rest: 0, t: 0, skips: 0, holeIdx: -1 }; }
+
+  function launchBall(b, P, p, sweet) {
+    var v = P.v0 * (0.35 + 0.65 * p) * (sweet ? 1.22 : 1);
+    var a = LAUNCH_DEG * Math.PI / 180;
+    b.vx = v * Math.cos(a);
+    b.vy = v * Math.sin(a);
+    b.y = 0.3;
+  }
+
+  function collideObstacles(b, W) {
+    var k = Math.floor(b.x / CHUNK);
+    for (var kk = k - 1; kk <= k + 1; kk++) {
+      if (kk < 1) continue;
+      var fs = chunkFeatures(W, kk);
+      for (var i = 0; i < fs.length; i++) {
+        var f = fs[i];
+        if (f.type !== 'tree' && f.type !== 'pole') continue;
+        var top = f.gy + f.h, hw = f.w / 2 + BALL_R;
+        if (b.x > f.x - hw && b.x < f.x + hw && b.y < top && b.y > f.gy - 1) {
+          if (b.vy < 0 && b.y > top - 0.9) {
+            b.y = top; b.vy = -b.vy * 0.4; b.vx *= 0.8;
+          } else {
+            var dir = b.x < f.x ? -1 : 1;
+            b.x = f.x + dir * hw;
+            b.vx = -b.vx * 0.3; b.vy *= 0.85;
+          }
+        }
+      }
+    }
+  }
+
+  function sub(b, W, P, h) {
+    var dg = Math.exp(-P.drag * h);
+    b.vx *= dg; b.vy *= dg;
+    b.vy -= W.g * h;
+    b.x += b.vx * h; b.y += b.vy * h;
+    collideObstacles(b, W);
+
+    var surf = surfaceAt(W, b.x);
+    if (surf && surf.type === 'water' && b.y <= surf.level) {
+      var s0 = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+      if (W.skip && b.vy < 0 && s0 > 14 && -b.vy / s0 < 0.45 && b.skips < 5) {
+        b.vy = -b.vy * 0.45; b.vx *= 0.78; b.y = surf.level + 0.02; b.skips++;
+      } else {
+        return 'water';
+      }
+    }
+
+    var gy = groundY(W, b.x);
+    var sp;
+    if (b.y <= gy) {
+      var sl = (groundY(W, b.x + 0.05) - groundY(W, b.x - 0.05)) / 0.1;
+      var nl = Math.sqrt(1 + sl * sl), nx = -sl / nl, ny = 1 / nl;
+      var onSand = surf && surf.type === 'sand';
+      var mu = P.muScale * (onSand ? W.muSand : W.mu);
+      var e = Math.min(0.94, (onSand ? W.eSand : W.e) * P.bounce);
+      b.y = gy;
+      var vn = b.vx * nx + b.vy * ny;
+      if (vn < 0) {
+        if (vn > -1.5) e = 0;
+        b.vx -= (1 + e) * vn * nx; b.vy -= (1 + e) * vn * ny;
+        var tx0 = ny, ty0 = -nx;
+        var vt0 = (b.vx * tx0 + b.vy * ty0) * (1 - Math.min(0.5, 0.04 + 0.06 * mu));
+        var vn0 = b.vx * nx + b.vy * ny;
+        b.vx = vt0 * tx0 + vn0 * nx; b.vy = vt0 * ty0 + vn0 * ny;
+      }
+      var tx = ny, ty = -nx;
+      var vt = b.vx * tx + b.vy * ty, vn1 = b.vx * nx + b.vy * ny;
+      var dec = mu * W.g * h * ny;
+      if (vt > 0) vt = Math.max(0, vt - dec); else vt = Math.min(0, vt + dec);
+      b.vx = vt * tx + vn1 * nx; b.vy = vt * ty + vn1 * ny;
+      sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+      if (sp < 0.35) b.rest += h; else b.rest = 0;
+
+      for (var hi = 0; hi < W.holes.length; hi++) {
+        if (Math.abs(b.x - W.holes[hi]) < 0.9 && sp < 10) { b.holeIdx = hi; return 'hole'; }
+      }
+    } else {
+      b.rest = 0;
+    }
+    return null;
+  }
+
+  // Advance by dt; returns null while flying, otherwise 'stop' | 'water' | 'hole'.
+  function stepBall(b, W, P, dt) {
+    var spd = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+    var n = Math.min(14, Math.max(1, Math.ceil(spd * dt / 0.6)));
+    var h = dt / n;
+    for (var i = 0; i < n; i++) {
+      var r = sub(b, W, P, h);
+      if (r) return r;
+    }
+    b.t += dt;
+    if (b.rest > 0.45) return 'stop';
+    return b.t > 240 ? 'stop' : null;
+  }
+
+  // ---------- Upgrades, balls, skins ----------
+
+  var BALLS = [
+    { id: 'std', name: 'Zwykła', color: '#ffffff', price: 0, power: 1, earn: 1, spd: 0, bnc: 0, desc: 'Standardowa piłka.' },
+    { id: 'gold', name: 'Złota', color: '#f1c40f', price: 20, power: 1, earn: 3, spd: 0, bnc: 0, desc: 'Zarobki ×3.' },
+    { id: 'power', name: 'Mocna', color: '#e74c3c', price: 25, power: 1.5, earn: 1, spd: 0, bnc: 0, desc: 'Siła uderzenia ×1,5.' },
+    { id: 'speed', name: 'Szybka', color: '#3498db', price: 25, power: 1, earn: 1, spd: 12, bnc: 0, desc: 'Mniejszy opór (+12 poz. Szybkości).' },
+    { id: 'bounce', name: 'Skoczna', color: '#2ecc71', price: 25, power: 1, earn: 1, spd: 0, bnc: 12, desc: 'Wyższe odbicia (+12 poz. Odbicia).' },
+    { id: 'extra', name: 'Ekstra', color: '#9b59b6', price: 60, power: 1.4, earn: 2, spd: 0, bnc: 0, desc: 'Siła ×1,4 i zarobki ×2.' },
+  ];
+  var SKINS = [
+    { name: 'Klasyk', cap: '#e74c3c', shirt: '#ecf0f1', price: 0 },
+    { name: 'Niebieski', cap: '#2980b9', shirt: '#5dade2', price: 100 },
+    { name: 'Zielony', cap: '#27ae60', shirt: '#82e0aa', price: 300 },
+    { name: 'Pomarańcz', cap: '#d35400', shirt: '#f5b041', price: 800 },
+    { name: 'Fiolet', cap: '#6c3483', shirt: '#bb8fce', price: 2000 },
+    { name: 'Różowy', cap: '#c2185b', shirt: '#f48fb1', price: 5000 },
+    { name: 'Czarny', cap: '#212121', shirt: '#616161', price: 12000 },
+    { name: 'Złoty', cap: '#b7950b', shirt: '#f4d03f', price: 30000 },
+    { name: 'Lodowy', cap: '#2e86c1', shirt: '#d6eaf8', price: 70000 },
+    { name: 'Lawa', cap: '#922b21', shirt: '#e67e22', price: 150000 },
+    { name: 'Neon', cap: '#00e5ff', shirt: '#76ff03', price: 300000 },
+    { name: 'Kosmonauta', cap: '#bdc3c7', shirt: '#ffffff', price: 600000 },
+  ];
+  var HOLE_NAMES = ['Birdie', 'Eagle', 'Albatros'];
+  var HOLE_BONUS = [150, 600, 2500];
+
+  function upgradeCost(lv) { return Math.round(20 * Math.pow(1.3, lv)); }
+
+  function statsFor(W, up, ball) {
+    var spd = up.spd + ball.spd, bnc = up.bnc + ball.bnc;
+    return {
+      v0: 22 * (1 + 0.12 * up.str) * (1 + 0.05 * spd) * ball.power,
+      drag: W.drag * (1 - Math.min(0.6, 0.02 * spd)),
+      muScale: 1 - Math.min(0.65, 0.022 * spd),
+      bounce: 1 + 0.05 * bnc,
+      earn: ball.earn,
+    };
+  }
+
+  function runShot(wi, up, ball, p, sweet) {
+    var W = WORLDS[wi], P = statsFor(W, up, ball), b = makeBall();
+    launchBall(b, P, p, sweet);
+    var res = null, t = 0, maxY = 0;
+    while (t < 260) {
+      res = stepBall(b, W, P, DT);
+      if (b.y > maxY) maxY = b.y;
+      t += DT;
+      if (res) break;
+    }
+    return { dist: b.x, res: res || 'stop', hole: b.holeIdx, t: t, maxY: maxY };
+  }
+
+  // ---------- Save data (per account, guest slot otherwise) ----------
+
+  var save;
+  function freshSave() {
+    return { v: 1, coins: 0, gems: 0, up: { str: 0, spd: 0, bnc: 0 },
+      balls: { owned: ['std'], sel: 'std' }, skins: { owned: [0], sel: 0 },
+      unlocked: 0, world: 0, best: [0, 0, 0, 0], orbits: [false, false, false, false], shots: 0, wheelAt: 0 };
+  }
+  function saveKey() {
+    var user = '';
+    try { user = localStorage.getItem('mg_session') || ''; } catch (e) {}
+    return 'mg_orbgolf_v1:' + (user ? user.toLowerCase() : 'gosc');
+  }
+  function loadSave() {
+    var f = freshSave();
+    try {
+      var raw = localStorage.getItem(saveKey());
+      var s = raw ? JSON.parse(raw) : null;
+      if (s && s.v === 1) {
+        f.coins = Math.max(0, +s.coins || 0);
+        f.gems = Math.max(0, +s.gems || 0);
+        ['str', 'spd', 'bnc'].forEach(function (k) { f.up[k] = clamp((s.up && +s.up[k]) || 0, 0, MAXLV) | 0; });
+        if (s.balls && s.balls.owned) {
+          f.balls.owned = s.balls.owned.filter(function (id) { return BALLS.some(function (b) { return b.id === id; }); });
+          if (f.balls.owned.indexOf('std') < 0) f.balls.owned.unshift('std');
+          f.balls.sel = f.balls.owned.indexOf(s.balls.sel) >= 0 ? s.balls.sel : 'std';
+        }
+        if (s.skins && s.skins.owned) {
+          f.skins.owned = s.skins.owned.filter(function (i) { return i >= 0 && i < SKINS.length; });
+          if (f.skins.owned.indexOf(0) < 0) f.skins.owned.unshift(0);
+          f.skins.sel = f.skins.owned.indexOf(s.skins.sel) >= 0 ? s.skins.sel : 0;
+        }
+        f.unlocked = clamp(s.unlocked | 0, 0, WORLDS.length - 1);
+        f.world = clamp(s.world | 0, 0, f.unlocked);
+        for (var i = 0; i < WORLDS.length; i++) {
+          f.best[i] = Math.max(0, +(s.best && s.best[i]) || 0);
+          f.orbits[i] = !!(s.orbits && s.orbits[i]);
+        }
+        f.shots = Math.max(0, s.shots | 0);
+        f.wheelAt = +s.wheelAt || 0;
+      }
+    } catch (e) {}
+    return f;
+  }
+  function writeSave() { try { localStorage.setItem(saveKey(), JSON.stringify(save)); } catch (e) {} }
+  save = loadSave();
+
+  function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+  function curBall() { for (var i = 0; i < BALLS.length; i++) if (BALLS[i].id === save.balls.sel) return BALLS[i]; return BALLS[0]; }
+  function sumLevels() { return save.up.str + save.up.spd + save.up.bnc; }
+
+  // ---------- DOM ----------
+
+  var $ = function (id) { return document.getElementById(id); };
+  var cv = $('cv'), ctx = cv.getContext('2d'), stage = $('stage');
+  var VW = 300, VH = 300, dpr = 1;
+
+  function showScreen(name) {
+    $('screen-menu').classList.toggle('is-active', name === 'menu');
+    $('screen-game').classList.toggle('is-active', name === 'game');
+    if (name === 'game') resize();
+  }
+
+  function refreshMenu() {
+    save = loadSave();
+    var best = 0;
+    for (var i = 0; i < save.best.length; i++) best = Math.max(best, save.best[i]);
+    $('menu-stats').textContent = save.shots > 0
+      ? 'Rekord: ' + fmt(best) + ' m · 🪙 ' + fmt(save.coins) + ' · 💎 ' + save.gems
+      : '';
+    $('btn-play').textContent = save.shots > 0 ? '▶ Kontynuuj' : '▶ Graj';
+  }
+
+  function resize() {
+    var w = Math.max(200, stage.clientWidth), h = Math.max(200, stage.clientHeight);
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    VW = w; VH = h;
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+  }
+
+  var bannerTimer = null;
+  function banner(text) {
+    var el = $('banner');
+    el.textContent = text;
+    el.classList.add('is-visible');
+    if (bannerTimer) clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(function () { el.classList.remove('is-visible'); }, 1300);
+  }
+
+  // ---------- Game state ----------
+
+  var state = 'ready'; // ready | swing | flight | result
+  var W = WORLDS[0], P = null, ball = makeBall();
+  var cam = { x: -6, y: 0, ppm: 12 };
+  var swingT = 0, meterP = 0, sweetHit = false, golfSwing = 1, acc = 0, trail = [], trailT = 0, maxAlt = 0;
+  var stars = [], i0;
+  for (i0 = 0; i0 < 120; i0++) stars.push({ x: hash(i0, 1, 1), y: hash(i0, 2, 2), r: 0.6 + hash(i0, 3, 3) * 1.4 });
+
+  function setWorld(i) {
+    save.world = i;
+    W = WORLDS[i];
+    writeSave();
+    resetShot();
+  }
+
+  function updateHud() {
+    $('hud-coins').textContent = '🪙 ' + fmt(save.coins);
+    $('hud-gems').textContent = '💎 ' + save.gems;
+    $('hud-world').textContent = (save.world + 1) + '. ' + W.name + ' · orbita ' + fmt(W.orbit) + ' m';
+    $('hud-best').textContent = 'Rekord: ' + fmt(save.best[save.world]) + ' m';
+  }
+
+  function setMeterUi() {
+    $('sweet').style.left = '80%';
+    $('sweet').style.width = '10%';
+    $('needle').style.left = (meterP * 100) + '%';
+    var label = $('meter-label');
+    if (state === 'ready') label.textContent = 'Dotknij ekran, aby zacząć zamach';
+    else if (state === 'swing') label.textContent = 'Dotknij w zielonym polu!';
+    $('meter-wrap').style.display = (state === 'ready' || state === 'swing') ? 'block' : 'none';
+    $('dist').style.display = state === 'flight' ? 'block' : 'none';
+  }
+
+  function resetShot() {
+    W = WORLDS[save.world];
+    ball = makeBall();
+    P = statsFor(W, save.up, curBall());
+    state = 'ready';
+    swingT = 0; meterP = 0; golfSwing = 1; acc = 0; trail = []; trailT = 0; maxAlt = 0;
+    cam.ppm = VW / 26; cam.x = -0.28 * VW / cam.ppm; cam.y = 0;
+    $('result').classList.remove('is-visible');
+    updateHud();
+    setMeterUi();
+  }
+
+  function tri(t) { return 1 - Math.abs((t % 2) - 1); }
+
+  function startSwing() {
+    if (state !== 'ready') return;
+    state = 'swing'; swingT = 0;
+    setMeterUi();
+  }
+
+  function hit() {
+    if (state !== 'swing') return;
+    var p = meterP;
+    sweetHit = p >= 0.8 && p <= 0.9;
+    P = statsFor(W, save.up, curBall());
+    launchBall(ball, P, p, sweetHit);
+    state = 'flight';
+    golfSwing = 0; acc = 0; trail = [];
+    banner(sweetHit ? 'IDEALNE! ✨' : (p > 0.9 ? 'Za mocno!' : (p < 0.4 ? 'Słabo…' : 'Dobrze!')));
+    setMeterUi();
+  }
+
+  function finishShot(res) {
+    state = 'result';
+    setMeterUi();
+    var wi = save.world;
+    var dist = Math.max(0, Math.round(ball.x));
+    var coins = Math.floor(dist * 0.5 * W.earn * P.earn * (sweetHit ? 1.3 : 1));
+    var lines = [];
+    var title = fmt(dist) + ' m';
+
+    lines.push('Dystans: <b>' + fmt(dist) + ' m</b>' + (res === 'water' ? ' · wpadła do wody 💦' : ''));
+    lines.push('Monety: <b>+' + fmt(coins) + ' 🪙</b>' + (sweetHit ? ' (idealne zagranie ×1,3)' : ''));
+
+    if (res === 'hole') {
+      var bonus = Math.round(HOLE_BONUS[ball.holeIdx] * W.earn);
+      coins += bonus;
+      title = HOLE_NAMES[ball.holeIdx] + '! ⛳';
+      lines.push('Trafiony dołek <b>' + HOLE_NAMES[ball.holeIdx] + '</b>: <b>+' + fmt(bonus) + ' 🪙</b>');
+    }
+    if (dist > save.best[wi]) {
+      if (save.best[wi] > 0) lines.push('🏆 <b>Nowy rekord!</b>');
+      save.best[wi] = dist;
+    }
+    if (dist >= W.orbit) {
+      if (!save.orbits[wi]) {
+        save.orbits[wi] = true;
+        var ob = Math.round(3000 * W.earn);
+        coins += ob; save.gems += 8;
+        title = 'ORBITA! 🚀';
+        lines.push('🚀 <b>Orbita osiągnięta!</b> +' + fmt(ob) + ' 🪙 +8 💎');
+        if (wi + 1 < WORLDS.length && save.unlocked < wi + 1) {
+          save.unlocked = wi + 1;
+          lines.push('🌍 Odblokowano świat: <b>' + WORLDS[wi + 1].name + '</b>');
+        }
+      } else {
+        save.gems += 1;
+        lines.push('🚀 Orbita! <b>+1 💎</b>');
+      }
+    }
+    save.coins += coins;
+    save.shots += 1;
+    writeSave();
+    updateHud();
+    $('r-title').textContent = title;
+    $('r-lines').innerHTML = lines.join('<br>');
+    $('result').classList.add('is-visible');
+  }
+
+  function update(dt) {
+    if (state === 'swing') {
+      swingT += dt;
+      meterP = tri(swingT * 1.25);
+      $('needle').style.left = (meterP * 100) + '%';
+    }
+    if (golfSwing < 1) golfSwing = Math.min(1, golfSwing + dt / 0.3);
+    if (state === 'flight') {
+      var scale = ball.t < 3 ? 1 : (ball.t < 8 ? 2 : (ball.t < 20 ? 4 : 8));
+      acc += dt * scale;
+      var guard = 0, res = null;
+      while (acc >= DT && !res && guard++ < 500) {
+        acc -= DT;
+        res = stepBall(ball, W, P, DT);
+        trailT += DT;
+        if (trailT > 0.05 * scale) { trailT = 0; trail.push({ x: ball.x, y: ball.y }); if (trail.length > 90) trail.shift(); }
+        if (ball.y > maxAlt) maxAlt = ball.y;
+      }
+      $('dist').textContent = fmt(Math.max(0, ball.x)) + ' m';
+      if (res) finishShot(res);
+    }
+    // camera
+    // Zoom out as the ball climbs so both it and the ground stay in frame; the
+    // ground slides down the screen from 66% to 86% height as the ball gets high.
+    var flying = state === 'flight', gb = groundY(W, ball.x), alt = Math.max(ball.y - gb, 0);
+    var tgtPpm = Math.min(VW / 26, 0.72 * VH / (alt + 8));
+    cam.ppm += (tgtPpm - cam.ppm) * Math.min(1, dt * (flying ? 7 : 3));
+    cam.x += (ball.x - 0.28 * VW / cam.ppm - cam.x) * Math.min(1, dt * (flying ? 14 : 3));
+    var groundFrac = 0.66 + 0.2 * clamp(alt / 25, 0, 1);
+    cam.y += (gb + (groundFrac - 0.66) * VH / cam.ppm - cam.y) * Math.min(1, dt * (flying ? 10 : 4));
+  }
+
+  // ---------- Drawing ----------
+
+  function hex(c) { return [parseInt(c.substr(1, 2), 16), parseInt(c.substr(3, 2), 16), parseInt(c.substr(5, 2), 16)]; }
+  function mix(c1, c2, t) {
+    var a = hex(c1), b = hex(c2);
+    return 'rgb(' + Math.round(a[0] + (b[0] - a[0]) * t) + ',' + Math.round(a[1] + (b[1] - a[1]) * t) + ',' + Math.round(a[2] + (b[2] - a[2]) * t) + ')';
+  }
+
+  function drawTree(kind, sx, sy, w, h, ppm) {
+    var pw = w * ppm, ph = h * ppm;
+    if (kind === 'tree') {
+      ctx.fillStyle = '#6d4c2f'; ctx.fillRect(sx - pw * 0.18, sy - ph * 0.55, pw * 0.36, ph * 0.55);
+      ctx.fillStyle = '#2e8b3c'; ctx.beginPath(); ctx.ellipse(sx, sy - ph * 0.68, pw * 0.85, ph * 0.38, 0, 0, Math.PI * 2); ctx.fill();
+    } else if (kind === 'cactus') {
+      ctx.fillStyle = '#2f8f4e';
+      ctx.fillRect(sx - pw * 0.2, sy - ph, pw * 0.4, ph);
+      ctx.fillRect(sx - pw * 0.7, sy - ph * 0.6, pw * 0.5, pw * 0.25);
+      ctx.fillRect(sx - pw * 0.7, sy - ph * 0.8, pw * 0.25, ph * 0.25);
+      ctx.fillRect(sx + pw * 0.2, sy - ph * 0.45, pw * 0.5, pw * 0.25);
+      ctx.fillRect(sx + pw * 0.45, sy - ph * 0.65, pw * 0.25, ph * 0.25);
+    } else if (kind === 'pine') {
+      ctx.fillStyle = '#5d4037'; ctx.fillRect(sx - pw * 0.1, sy - ph * 0.2, pw * 0.2, ph * 0.2);
+      ctx.fillStyle = '#1e6b45';
+      for (var i = 0; i < 3; i++) {
+        var y1 = sy - ph * (0.15 + i * 0.28), wd = pw * (0.9 - i * 0.22);
+        ctx.beginPath(); ctx.moveTo(sx - wd, y1); ctx.lineTo(sx + wd, y1); ctx.lineTo(sx, y1 - ph * 0.42); ctx.closePath(); ctx.fill();
+      }
+    } else { // rock / antenna on the moon
+      ctx.fillStyle = '#6e7178';
+      ctx.beginPath(); ctx.moveTo(sx - pw * 0.8, sy); ctx.lineTo(sx - pw * 0.35, sy - ph * 0.7); ctx.lineTo(sx + pw * 0.3, sy - ph); ctx.lineTo(sx + pw * 0.8, sy); ctx.closePath(); ctx.fill();
+    }
+  }
+
+  function drawGolfer(sx, sy, s, skin, t) {
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#37474f'; ctx.lineWidth = Math.max(2, 0.18 * s);
+    ctx.beginPath(); ctx.moveTo(-0.15 * s, 0); ctx.lineTo(-0.1 * s, -0.9 * s); ctx.moveTo(0.2 * s, 0); ctx.lineTo(0.05 * s, -0.9 * s); ctx.stroke();
+    ctx.fillStyle = skin.shirt; ctx.fillRect(-0.3 * s, -1.55 * s, 0.6 * s, 0.7 * s);
+    ctx.fillStyle = '#f5cba7'; ctx.beginPath(); ctx.arc(0, -1.75 * s, 0.26 * s, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = skin.cap; ctx.beginPath(); ctx.arc(0, -1.8 * s, 0.27 * s, Math.PI, Math.PI * 2); ctx.fill(); ctx.fillRect(0, -1.82 * s, 0.4 * s, 0.07 * s);
+    // club: back-swing -> through impact -> follow-through
+    var ang = t >= 1 ? 0.5 : (-2.5 + t * 3.4);
+    ctx.translate(0.1 * s, -1.25 * s);
+    ctx.rotate(ang);
+    ctx.strokeStyle = '#b0bec5'; ctx.lineWidth = Math.max(1.5, 0.08 * s);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 1.25 * s); ctx.stroke();
+    ctx.fillStyle = '#90a4ae'; ctx.fillRect(-0.05 * s, 1.18 * s, 0.35 * s, 0.1 * s);
+    ctx.restore();
+  }
+
+  function draw() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var ppm = cam.ppm, baseY = VH * 0.66;
+    function sx(x) { return (x - cam.x) * ppm; }
+    function sy(y) { return baseY - (y - cam.y) * ppm; }
+
+    // sky (fades into space with altitude; the moon is always space)
+    var topAlt = cam.y + baseY / ppm;
+    var a = W.spaceAlt > 0 ? clamp(topAlt / W.spaceAlt, 0, 1) : 1;
+    var grd = ctx.createLinearGradient(0, 0, 0, VH);
+    grd.addColorStop(0, mix(W.sky[0], '#01020a', a));
+    grd.addColorStop(1, mix(W.sky[1], '#0a1030', a * 0.85));
+    ctx.fillStyle = grd; ctx.fillRect(0, 0, VW, VH);
+    if (a > 0.05) {
+      ctx.fillStyle = '#fff';
+      for (var si = 0; si < stars.length; si++) {
+        ctx.globalAlpha = a * (0.4 + stars[si].r / 3);
+        ctx.beginPath(); ctx.arc(stars[si].x * VW, stars[si].y * VH * 0.9, stars[si].r, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+    if (a < 0.95 && W.id !== 'moon') {
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.85 * (1 - a)) + ')';
+      for (var ci = 0; ci < 8; ci++) {
+        var span = VW * 1.7;
+        var cx = (((ci * 0.37 * span - cam.x * ppm * 0.12) % span) + span) % span - VW * 0.3;
+        var cy = VH * (0.08 + 0.06 * (ci % 4));
+        ctx.beginPath(); ctx.ellipse(cx, cy, 34, 11, 0, 0, Math.PI * 2); ctx.ellipse(cx + 22, cy + 3, 26, 9, 0, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
+    var x0 = cam.x, x1 = cam.x + VW / ppm;
+    var k0 = Math.max(1, Math.floor(x0 / CHUNK) - 1), k1 = Math.floor(x1 / CHUNK) + 1, k, i, f, fs;
+
+    // water behind the terrain
+    for (k = k0; k <= k1; k++) {
+      fs = chunkFeatures(W, k);
+      for (i = 0; i < fs.length; i++) {
+        f = fs[i];
+        if (f.type === 'water') {
+          ctx.fillStyle = W.waterColor; ctx.fillRect(sx(f.a), sy(f.level), (f.b - f.a) * ppm, 4 * ppm);
+        }
+      }
+    }
+
+    // terrain
+    ctx.beginPath(); ctx.moveTo(0, VH);
+    for (var px = 0; px <= VW + 4; px += 4) ctx.lineTo(px, sy(groundY(W, x0 + px / ppm)));
+    ctx.lineTo(VW + 4, VH); ctx.closePath();
+    ctx.fillStyle = W.ground[0]; ctx.fill();
+    ctx.beginPath();
+    for (px = 0; px <= VW + 4; px += 4) { var yy = sy(groundY(W, x0 + px / ppm)); if (px === 0) ctx.moveTo(px, yy); else ctx.lineTo(px, yy); }
+    ctx.strokeStyle = W.ground[1]; ctx.lineWidth = 5; ctx.stroke();
+
+    // sand strips, water surface, obstacles
+    for (k = k0; k <= k1; k++) {
+      fs = chunkFeatures(W, k);
+      for (i = 0; i < fs.length; i++) {
+        f = fs[i];
+        if (f.type === 'sand') {
+          ctx.beginPath();
+          for (var xs = f.a; xs <= f.b + 0.01; xs += Math.max(0.5, 3 / ppm)) { var py = sy(groundY(W, xs)); if (xs === f.a) ctx.moveTo(sx(xs), py); else ctx.lineTo(sx(xs), py); }
+          ctx.strokeStyle = W.sandColor; ctx.lineWidth = 7; ctx.stroke();
+        } else if (f.type === 'water') {
+          ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(sx(f.a), sy(f.level)); ctx.lineTo(sx(f.b), sy(f.level)); ctx.stroke();
+        } else if (f.type === 'tree') {
+          drawTree(W.tree, sx(f.x), sy(f.gy), f.w, f.h, ppm);
+        } else if (f.type === 'pole') {
+          ctx.strokeStyle = '#cfd8dc'; ctx.lineWidth = Math.max(2, f.w * ppm);
+          ctx.beginPath(); ctx.moveTo(sx(f.x), sy(f.gy)); ctx.lineTo(sx(f.x), sy(f.gy + f.h)); ctx.stroke();
+          ctx.fillStyle = '#e74c3c'; ctx.fillRect(sx(f.x), sy(f.gy + f.h), 1.2 * ppm, 0.8 * ppm);
+        }
+      }
+    }
+
+    // distance markers
+    var cands = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000], step = 50000;
+    for (i = 0; i < cands.length; i++) if (cands[i] * ppm >= 90) { step = cands[i]; break; }
+    ctx.font = '600 11px sans-serif'; ctx.textAlign = 'center';
+    for (var mx = Math.max(step, Math.ceil(x0 / step) * step); mx < x1; mx += step) {
+      var gx = sx(mx), gyy = sy(groundY(W, mx));
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(gx, gyy); ctx.lineTo(gx, gyy - 16); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillText(fmt(mx) + ' m', gx, gyy + 16);
+    }
+
+    // holes
+    for (i = 0; i < W.holes.length; i++) {
+      var hx = W.holes[i];
+      if (hx < x0 - 5 || hx > x1 + 5) continue;
+      var hsx = sx(hx), hsy = sy(W.holeY[i]);
+      ctx.fillStyle = '#111'; ctx.beginPath(); ctx.ellipse(hsx, hsy, Math.max(5, 0.9 * ppm), Math.max(2, 0.3 * ppm), 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(hsx, hsy); ctx.lineTo(hsx, hsy - 5 * ppm); ctx.stroke();
+      ctx.fillStyle = ['#2ecc71', '#f1c40f', '#e74c3c'][i]; ctx.beginPath();
+      ctx.moveTo(hsx, hsy - 5 * ppm); ctx.lineTo(hsx + 2.2 * ppm, hsy - 4.3 * ppm); ctx.lineTo(hsx, hsy - 3.6 * ppm); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = '700 11px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(HOLE_NAMES[i], hsx, hsy - 5.4 * ppm);
+    }
+
+    // tee + golfer
+    if (sx(0) > -80 && sx(0) < VW + 80) {
+      ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(sx(0) - 2, sy(0.3), 4, 0.3 * ppm);
+      drawGolfer(sx(-1.1), sy(0), Math.max(10, ppm), SKINS[save.skins.sel], golfSwing);
+    }
+
+    // trail + ball
+    for (i = 0; i < trail.length; i++) {
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.05 + 0.3 * i / trail.length) + ')';
+      ctx.beginPath(); ctx.arc(sx(trail[i].x), sy(trail[i].y), 2.5, 0, Math.PI * 2); ctx.fill();
+    }
+    var br = Math.max(0.4 * ppm, 5), bx = sx(ball.x), by = sy(ball.y) - br * 0.6;
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(bx, sy(groundY(W, ball.x)) + 1, br, br * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = curBall().color; ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1; ctx.stroke();
+  }
+
+  // ---------- Shop ----------
+
+  var shopTab = 'up';
+  var UPG = [
+    { id: 'str', icon: '💪', name: 'Siła', desc: function (l) { return 'Prędkość startowa +' + (l * 12) + '%'; } },
+    { id: 'spd', icon: '⚡', name: 'Szybkość', desc: function (l) { return 'Prędkość +' + (l * 5) + '%, mniejszy opór i tarcie'; } },
+    { id: 'bnc', icon: '🏀', name: 'Odbicie', desc: function (l) { return 'Sprężystość odbić +' + (l * 5) + '%'; } },
+  ];
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  function rowFor(icon, titleText, descText, btn, selected, swatch) {
+    var row = el('div', 'row' + (selected ? ' is-sel' : ''));
+    if (swatch) { var sw = el('div', 'swatch'); sw.style.background = swatch; row.appendChild(sw); }
+    else row.appendChild(el('div', 'ico', icon));
+    var info = el('div', 'info');
+    info.appendChild(el('b', '', titleText));
+    info.appendChild(el('span', '', descText));
+    row.appendChild(info);
+    if (btn) row.appendChild(btn);
+    return row;
+  }
+  function buyBtn(label, enabled, handler) {
+    var b = el('button', 'btn btn--small', label);
+    b.type = 'button'; b.disabled = !enabled;
+    if (enabled) b.addEventListener('click', handler);
+    return b;
+  }
+
+  function renderShop() {
+    var tabs = $('shop-tabs'), body = $('shop-body');
+    tabs.innerHTML = ''; body.innerHTML = '';
+    [['up', 'Ulepszenia'], ['ball', 'Piłki'], ['skin', 'Golfiści'], ['world', 'Światy']].forEach(function (t) {
+      var b = el('button', 'tab' + (shopTab === t[0] ? ' is-active' : ''), t[1]);
+      b.type = 'button';
+      b.addEventListener('click', function () { shopTab = t[0]; renderShop(); });
+      tabs.appendChild(b);
+    });
+    if (shopTab === 'up') {
+      UPG.forEach(function (u) {
+        var lv = save.up[u.id], max = lv >= MAXLV, cost = upgradeCost(lv);
+        var btn = buyBtn(max ? 'MAX' : 'Kup 🪙 ' + fmt(cost), !max && save.coins >= cost, function () {
+          save.coins -= cost; save.up[u.id] += 1; writeSave(); updateHud(); renderShop();
+        });
+        body.appendChild(rowFor(u.icon, u.name + ' — poz. ' + lv + '/' + MAXLV, u.desc(lv), btn, false));
+      });
+    } else if (shopTab === 'ball') {
+      BALLS.forEach(function (b) {
+        var owned = save.balls.owned.indexOf(b.id) >= 0, sel = save.balls.sel === b.id, btn;
+        if (owned) btn = buyBtn(sel ? 'Wybrana' : 'Wybierz', !sel, function () { save.balls.sel = b.id; writeSave(); renderShop(); });
+        else btn = buyBtn('Kup 💎 ' + b.price, save.gems >= b.price, function () {
+          save.gems -= b.price; save.balls.owned.push(b.id); save.balls.sel = b.id; writeSave(); updateHud(); renderShop();
+        });
+        body.appendChild(rowFor('', b.name, b.desc, btn, sel, b.color));
+      });
+      body.appendChild(el('div', 'info', 'Diamenty 💎 zdobywasz na kole szczęścia i za orbity.'));
+    } else if (shopTab === 'skin') {
+      SKINS.forEach(function (s, idx) {
+        var owned = save.skins.owned.indexOf(idx) >= 0, sel = save.skins.sel === idx, btn;
+        if (owned) btn = buyBtn(sel ? 'Wybrany' : 'Wybierz', !sel, function () { save.skins.sel = idx; writeSave(); renderShop(); });
+        else btn = buyBtn('Kup 🪙 ' + fmt(s.price), save.coins >= s.price, function () {
+          save.coins -= s.price; save.skins.owned.push(idx); save.skins.sel = idx; writeSave(); updateHud(); renderShop();
+        });
+        body.appendChild(rowFor('', s.name, 'Czapka i koszulka', btn, sel, s.cap));
+      });
+    } else {
+      WORLDS.forEach(function (w, idx) {
+        var open = idx <= save.unlocked, sel = save.world === idx, btn;
+        if (open) btn = buyBtn(sel ? 'Tu grasz' : 'Graj tutaj', !sel, function () { setWorld(idx); $('shop').classList.remove('is-open'); });
+        else btn = buyBtn('🔒', false, null);
+        var icon = ['🌳', '🏜️', '❄️', '🌕'][idx];
+        var desc = open ? 'Orbita: ' + fmt(w.orbit) + ' m · rekord ' + fmt(save.best[idx]) + ' m · zarobki ×' + w.earn
+          : 'Osiągnij orbitę w poprzednim świecie';
+        body.appendChild(rowFor(icon, w.name, desc, btn, sel));
+      });
+    }
+  }
+
+  function openShop(tab) {
+    if (tab) shopTab = tab;
+    renderShop();
+    $('shop').classList.add('is-open');
+  }
+
+  // ---------- Lucky wheel ----------
+
+  var WHEEL = [
+    { k: 'c', m: 1, w: 30, col: '#c0392b' }, { k: 'g', v: 1, w: 18, col: '#2471a3' },
+    { k: 'c', m: 2, w: 22, col: '#d68910' }, { k: 'g', v: 2, w: 12, col: '#1a8a9a' },
+    { k: 'c', m: 4, w: 10, col: '#7d3c98' }, { k: 'g', v: 3, w: 5, col: '#1e8449' },
+    { k: 'c', m: 10, w: 2.5, col: '#b9770e' }, { k: 'g', v: 8, w: 0.5, col: '#8e44ad' },
+  ];
+  var wheelRot = 0, spinning = false, wheelTimer = null;
+  function wheelCoins(seg) { return Math.round(120 * seg.m * (1 + 0.35 * sumLevels())); }
+  function segText(seg) { return seg.k === 'c' ? '🪙' + fmt(wheelCoins(seg)) : '💎' + seg.v; }
+
+  function buildWheel() {
+    var wheel = $('wheel');
+    var stops = [];
+    WHEEL.forEach(function (s, i) { stops.push(s.col + ' ' + (i * 45) + 'deg ' + ((i + 1) * 45) + 'deg'); });
+    wheel.style.background = 'conic-gradient(' + stops.join(',') + ')';
+    wheel.innerHTML = '';
+    WHEEL.forEach(function (s, i) {
+      var lab = el('div', 'wheel-label', segText(s));
+      var ang = i * 45 + 22.5;
+      lab.style.transform = 'rotate(' + ang + 'deg) translateY(-88px) rotate(' + (-ang) + 'deg)';
+      wheel.appendChild(lab);
+    });
+  }
+
+  function wheelUi() {
+    var left = save.wheelAt - Date.now();
+    var btn = $('wheel-spin');
+    if (spinning) { btn.disabled = true; btn.textContent = 'Kręci się…'; return; }
+    if (left > 0) {
+      var s = Math.ceil(left / 1000);
+      btn.disabled = true;
+      btn.textContent = 'Następne za ' + Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
+    } else { btn.disabled = false; btn.textContent = 'Zakręć!'; }
+  }
+
+  function openWheel() {
+    buildWheel();
+    $('wheel-msg').textContent = '';
+    $('wheelm').classList.add('is-open');
+    wheelUi();
+    if (wheelTimer) clearInterval(wheelTimer);
+    wheelTimer = setInterval(wheelUi, 500);
+  }
+  function closeWheel() {
+    $('wheelm').classList.remove('is-open');
+    if (wheelTimer) { clearInterval(wheelTimer); wheelTimer = null; }
+  }
+
+  function spinWheel() {
+    if (spinning || Date.now() < save.wheelAt) return;
+    var total = 0, i;
+    for (i = 0; i < WHEEL.length; i++) total += WHEEL[i].w;
+    var r = Math.random() * total, pick = 0;
+    for (i = 0; i < WHEEL.length; i++) { r -= WHEEL[i].w; if (r <= 0) { pick = i; break; } }
+    var seg = WHEEL[pick];
+    // reward is granted up front so closing the window mid-spin can't dodge it
+    if (seg.k === 'c') save.coins += wheelCoins(seg); else save.gems += seg.v;
+    save.wheelAt = Date.now() + 15 * 60 * 1000;
+    writeSave();
+    spinning = true;
+    var centre = pick * 45 + 22.5;
+    var cur = ((wheelRot % 360) + 360) % 360;
+    wheelRot += 360 * 5 + ((360 - centre - cur) % 360 + 360) % 360;
+    $('wheel').style.transform = 'rotate(' + wheelRot + 'deg)';
+    $('wheel-msg').textContent = '';
+    wheelUi();
+    setTimeout(function () {
+      spinning = false;
+      $('wheel-msg').textContent = 'Wygrywasz: ' + segText(seg) + '!';
+      updateHud();
+      wheelUi();
+    }, 4200);
+  }
+
+  // ---------- Input & wiring ----------
+
+  function tap() {
+    if ($('shop').classList.contains('is-open') || $('wheelm').classList.contains('is-open')) return;
+    if (state === 'ready') startSwing();
+    else if (state === 'swing') hit();
+  }
+  cv.addEventListener('pointerdown', function (e) { e.preventDefault(); tap(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === ' ' || e.key === 'Enter') {
+      if ($('screen-game').classList.contains('is-active') && state !== 'result') { e.preventDefault(); tap(); }
+    }
+  });
+
+  // Shop purchases change the next shot's stats; refresh the idle state.
+  function resetShotIfIdle() { if (state === 'ready') { P = statsFor(W, save.up, curBall()); updateHud(); } }
+
+  $('btn-play').addEventListener('click', function () {
+    save = loadSave();
+    showScreen('game');
+    resetShot();
+  });
+  $('btn-reset').addEventListener('click', function () {
+    if (save.shots > 0 && !confirm('Zacząć od nowa? Stracisz cały zapisany postęp.')) return;
+    save = freshSave(); writeSave(); refreshMenu();
+  });
+  $('b-menu').addEventListener('click', function () { refreshMenu(); showScreen('menu'); });
+  $('b-shop').addEventListener('click', function () { openShop('up'); });
+  $('r-shop').addEventListener('click', function () { openShop('up'); });
+  $('shop-close').addEventListener('click', function () { $('shop').classList.remove('is-open'); resetShotIfIdle(); });
+  $('b-wheel').addEventListener('click', openWheel);
+  $('wheel-close').addEventListener('click', closeWheel);
+  $('wheel-spin').addEventListener('click', spinWheel);
+  $('r-next').addEventListener('click', function () { resetShot(); });
+  window.addEventListener('resize', resize);
+
+  var lastTs = null;
+  function frame(ts) {
+    requestAnimationFrame(frame);
+    if (!$('screen-game').classList.contains('is-active')) { lastTs = null; return; }
+    if (stage.clientWidth !== VW || stage.clientHeight !== VH) resize();
+    if (lastTs === null) lastTs = ts;
+    var dt = Math.min((ts - lastTs) / 1000, 0.05);
+    lastTs = ts;
+    update(dt);
+    draw();
+  }
+
+  refreshMenu();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
