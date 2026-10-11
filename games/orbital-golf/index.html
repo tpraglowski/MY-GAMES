@@ -206,6 +206,7 @@ window.addEventListener('error', function (e) {
 <script>
 (function () {
   var DT = 1 / 120, MAXLV = 40, CHUNK = 60, BALL_R = 0.3;
+  var GREEN_R = 24; // lighter putting green around each hole (flat; finish with a chip)
   var CURV_R = 900; // virtual planet radius (m) for the horizon curvature at altitude
 
   function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
@@ -269,7 +270,7 @@ window.addEventListener('error', function (e) {
   }
 
   function nearHole(W, a, b) {
-    for (var i = 0; i < W.holes.length; i++) if (W.holes[i] > a - 14 && W.holes[i] < b + 14) return true;
+    for (var i = 0; i < W.holes.length; i++) if (W.holes[i] > a - (GREEN_R + 8) && W.holes[i] < b + (GREEN_R + 8)) return true;
     return false;
   }
 
@@ -284,8 +285,8 @@ window.addEventListener('error', function (e) {
       list.push({ type: 'sand', a: 22, b: 40, level: baseHeight(W, 31) });
     } else if (k === 1) {
       // two trees a bit further on - a good shot has to clear them (or burn through)
-      list.push({ type: 'tree', x: 92, w: 2.2, h: 7, gy: baseHeight(W, 92), id: '1a' });
-      list.push({ type: 'tree', x: 108, w: 2.2, h: 8.5, gy: baseHeight(W, 108), id: '1b' });
+      list.push({ type: 'tree', x: 64, w: 2.2, h: 7, gy: baseHeight(W, 64), id: '1a' });
+      list.push({ type: 'tree', x: 80, w: 2.2, h: 8.5, gy: baseHeight(W, 80), id: '1b' });
     } else if (k >= 2) { // the first 120 m have no ponds so a beginner's first shots can land
       var r = hash(k, W.id.length * 31 + W.g, 1), start = k * CHUNK + 8 + hash(k, 7, 2) * 20;
       var hz = W.hz, acc = 0, kind = 'none';
@@ -339,8 +340,6 @@ window.addEventListener('error', function (e) {
     W.scn[k] = list;
     return list;
   }
-
-  var GREEN_R = 6; // lighter putting green around each hole (flat, you can finish with a putt)
 
   function applyZone(y, x, a, b, level, isWater) {
     var d = x < a ? a - x : (x > b ? x - b : 0);
@@ -478,7 +477,7 @@ window.addEventListener('error', function (e) {
       if (sp < 0.35) b.rest += h; else b.rest = 0;
 
       for (var hi = 0; hi < W.holes.length; hi++) {
-        if (Math.abs(b.x - W.holes[hi]) < 0.9 && sp < (b.putt ? 6 : 10)) { b.holeIdx = hi; return 'hole'; }
+        if (Math.abs(b.x - W.holes[hi]) < 0.9 && (b.putt ? Math.abs(b.vx) < 10 : sp < 10)) { b.holeIdx = hi; return 'hole'; }
       }
     } else {
       b.rest = 0;
@@ -659,7 +658,8 @@ window.addEventListener('error', function (e) {
   var swingT = 0, theta = ANG_CENTER, lastZone = ZONES[0], golfSwing = 1, acc = 0, trail = [], trailT = 0;
   var swingClock = 0, swingDur = 0.85, swingPerfect = false, swingTheta = ANG_CENTER, timeScale = 1;
   var readyAt = 0, clock = 0, particles = [], goalPulse = 0;
-  var puttT = 0, puttInfo = null; // putt aiming: power meter clock + {hi, dir, lo, up, vmax, d}
+  var puttInfo = null, puttClock = 0, puttV = null, puttDrag = null, golferX = 0, golferFace = 1; // chip: aim by pulling back
+  var PUTT_SWING = 0.5;
   var stars = [], i0;
   for (i0 = 0; i0 < 120; i0++) stars.push({ x: hash(i0, 1, 1), y: hash(i0, 2, 2), r: 0.6 + hash(i0, 3, 3) * 1.4 });
 
@@ -706,6 +706,7 @@ window.addEventListener('error', function (e) {
     cam.ppm = ppm; cam.x = -0.5 * VW / ppm; cam.y = readyCamY(ppm);
     $('result').classList.remove('is-visible');
     offerPutt(false);
+    golferX = 0; golferFace = 1; puttDrag = null;
     $('ui').classList.remove('in-flight');
     $('dist-big').textContent = '0 m';
     setGoalBar(0);
@@ -755,24 +756,58 @@ window.addEventListener('error', function (e) {
   function startPutt() {
     var hi = greenIdx(ball.x);
     if (hi < 0) return;
-    var hx = W.holes[hi], d = Math.abs(hx - ball.x), a = Math.max(0.05, P.muScale * W.mu * W.g);
-    var lo = Math.sqrt(2 * a * Math.max(d - 0.9, 0.01)) * 1.04, up = Math.sqrt(36 + 2 * a * (d + 0.9)) * 0.96;
-    puttInfo = { hi: hi, dir: hx >= ball.x ? 1 : -1, lo: lo, up: up, vmax: up * 1.5, d: d };
+    var hx = W.holes[hi];
+    puttInfo = { hi: hi, d: Math.abs(hx - ball.x) };
     ball.vx = 0; ball.vy = 0; ball.rest = 0; ball.t = 0; ball.fire = false; ball.putt = false; ball.holeIdx = -1;
-    puttT = 0; trail = []; particles = [];
+    golferX = ball.x; golferFace = hx >= ball.x ? 1 : -1; golfSwing = -1;
+    puttClock = 0; puttDrag = null; trail = []; particles = [];
     state = 'putt';
     readyAt = performance.now() + 350;
     $('result').classList.remove('is-visible');
     $('ui').classList.add('in-flight');
-    banner('Dobitka! Dotknij, gdy znacznik jest w zielonym');
+    banner('Dobitka! Przeciągnij w tył, puść żeby uderzyć');
   }
 
-  function puttPower() { return 1 - Math.abs(((puttT * 0.9) % 2) - 1); }
+  // Launch velocity from the pull-back vector (px): pull away from where the ball should go.
+  var PULL_MAX = 150;
+  function puttVelocity(dx, dy) {
+    var len = Math.sqrt(dx * dx + dy * dy), pw = clamp(len / PULL_MAX, 0, 1);
+    var vmax = Math.max(8, 20 * Math.sqrt(W.g / 9.8));
+    var lx = -dx, ly = dy; // pull left/down -> ball goes right/up
+    var sgn = lx === 0 ? golferFace : (lx > 0 ? 1 : -1);
+    var ang = clamp(Math.atan2(ly, Math.abs(lx)), 8 * Math.PI / 180, 85 * Math.PI / 180);
+    var v = pw * vmax;
+    return { vx: sgn * v * Math.cos(ang), vy: v * Math.sin(ang), pw: pw, face: sgn };
+  }
 
-  function doPutt() {
-    var v = puttPower() * puttInfo.vmax;
-    ball.vx = puttInfo.dir * v; ball.vy = 0; ball.rest = 0; ball.t = 0; ball.putt = true;
-    state = 'flight'; acc = 0; timeScale = 1;
+  // Predicted path (gravity + drag, up to the first ground contact) for the dotted line.
+  function puttPath(vel) {
+    var b = makeBall(), pts = [], landing = null;
+    b.x = ball.x; b.y = groundY(W, ball.x) + 0.3; b.vx = vel.vx; b.vy = vel.vy; b.putt = true;
+    for (var n = 0; n < 1500; n++) {
+      var r = stepBall(b, W, P, DT);
+      if (n % 5 === 0) pts.push({ x: b.x, y: b.y });
+      if (r) { landing = { x: b.x, y: b.y }; break; }
+      if (n > 3 && b.y <= groundY(W, b.x) + 0.02) { landing = { x: b.x, y: groundY(W, b.x) }; break; }
+    }
+    return { pts: pts, landing: landing };
+  }
+
+  function releasePutt() {
+    var dr = puttDrag; puttDrag = null;
+    if (!dr || state !== 'putt') return;
+    var dx = dr.x1 - dr.x0, dy = dr.y1 - dr.y0;
+    if (Math.sqrt(dx * dx + dy * dy) < 14) return; // a tiny tug cancels
+    puttV = puttVelocity(dx, dy);
+    golferFace = puttV.face;
+    state = 'pswing'; puttClock = 0; golfSwing = 0;
+  }
+
+  function launchPutt() {
+    ball.y = groundY(W, ball.x) + 0.3;
+    ball.vx = puttV.vx; ball.vy = puttV.vy; ball.rest = 0; ball.t = 0; ball.putt = true;
+    state = 'flight'; acc = 0; timeScale = 1; trail = [];
+    spawnBurst(ball.x, ball.y, false);
   }
 
   function finishPutt(res) {
@@ -900,12 +935,16 @@ window.addEventListener('error', function (e) {
       var tri = 1 - Math.abs(((swingT * 0.8) % 2) - 1);
       theta = ANG_MIN + (ANG_MAX - ANG_MIN) * tri;
     }
-    if (state === 'putt') puttT += dt;
+    if (state === 'pswing') {
+      puttClock += dt;
+      golfSwing = clamp(puttClock / PUTT_SWING, 0, 1);
+      if (puttClock >= PUTT_SWING * 0.8) launchPutt();
+    }
     if (state === 'swing') {
       swingClock += dt;
       golfSwing = clamp(swingClock / swingDur, 0, 1);
       if (swingClock >= swingDur * 0.8) doLaunch();
-    } else if (golfSwing < 1 && state !== 'ready') golfSwing = Math.min(1, golfSwing + dt / swingDur);
+    } else if (golfSwing < 1 && state !== 'ready' && state !== 'putt' && state !== 'pswing') golfSwing = Math.min(1, golfSwing + dt / swingDur);
     if (state === 'flight') {
       // Fast-forward the boring high part of a long flight, but never the
       // landing and roll: the factor eases (no sudden jump near the ground).
@@ -951,7 +990,7 @@ window.addEventListener('error', function (e) {
     var ppm, gf, cx;
     if (state === 'ready') {
       ppm = readyPpm(); gf = 0.8; cx = -0.5 * VW / ppm;
-    } else if (state === 'putt') { // frame the ball and the hole
+    } else if (state === 'putt' || state === 'pswing') { // frame the ball and the hole
       ppm = clamp(VW / (puttInfo.d + 14), 10, 60); gf = 0.7;
       cx = (ball.x + W.holes[puttInfo.hi]) / 2 - 0.5 * VW / ppm;
     } else {
@@ -1289,24 +1328,25 @@ window.addEventListener('error', function (e) {
       ctx.fillStyle = 'rgba(255,255,255,0.07)';
       ctx.fillRect(sx(sj * sw), 0, sw * ppm, VH);
     }
+    // putting greens: the grass itself is lighter around each hole, fading out softly
+    for (i = 0; i < W.holes.length; i++) {
+      var ga = W.holes[i] - GREEN_R, gb2 = W.holes[i] + GREEN_R;
+      if (gb2 < x0 - 2 || ga > x1 + 2) continue;
+      var gstep = Math.max(0.4, 4 / ppm), gxs, lc = hex(W.ground[0]);
+      var lr = Math.round(lc[0] + (255 - lc[0]) * 0.26), lg = Math.round(lc[1] + (255 - lc[1]) * 0.26), lb = Math.round(lc[2] + (255 - lc[2]) * 0.26);
+      var gg = ctx.createLinearGradient(sx(ga), 0, sx(gb2), 0);
+      gg.addColorStop(0, 'rgba(' + lr + ',' + lg + ',' + lb + ',0)'); gg.addColorStop(0.18, 'rgba(' + lr + ',' + lg + ',' + lb + ',0.95)');
+      gg.addColorStop(0.82, 'rgba(' + lr + ',' + lg + ',' + lb + ',0.95)'); gg.addColorStop(1, 'rgba(' + lr + ',' + lg + ',' + lb + ',0)');
+      ctx.beginPath(); ctx.moveTo(sx(ga), VH);
+      for (gxs = ga; gxs <= gb2 + 0.01; gxs += gstep) ctx.lineTo(sx(gxs), syw(groundY(W, gxs), gxs));
+      ctx.lineTo(sx(gb2), VH); ctx.closePath(); ctx.fillStyle = gg; ctx.fill();
+    }
     ctx.restore();
     ctx.beginPath();
     for (px = 0; px <= VW + 4; px += 4) { var gx2 = x0 + px / ppm, yy2 = syw(groundY(W, gx2), gx2); if (px === 0) ctx.moveTo(px, yy2); else ctx.lineTo(px, yy2); }
     ctx.strokeStyle = W.ground[1]; ctx.lineWidth = Math.max(4, ppm * 0.45); ctx.lineJoin = 'round'; ctx.stroke();
     if (curve > 0.02) { // atmosphere haze along the curved horizon
       ctx.strokeStyle = 'rgba(150,215,255,' + (0.35 * curve) + ')'; ctx.lineWidth = 16 + 18 * curve; ctx.stroke();
-    }
-
-    // --- putting greens: a lighter, flat patch around every hole ---
-    for (i = 0; i < W.holes.length; i++) {
-      var ga = W.holes[i] - GREEN_R, gb2 = W.holes[i] + GREEN_R;
-      if (gb2 < x0 - 2 || ga > x1 + 2) continue;
-      var gstep = Math.max(0.4, 3 / ppm), gxs;
-      ctx.beginPath();
-      for (gxs = ga; gxs <= gb2 + 0.01; gxs += gstep) { if (gxs === ga) ctx.moveTo(sx(gxs), syw(groundY(W, gxs), gxs)); else ctx.lineTo(sx(gxs), syw(groundY(W, gxs), gxs)); }
-      for (gxs = gb2; gxs >= ga - 0.01; gxs -= gstep) ctx.lineTo(sx(gxs), syw(groundY(W, gxs) - 1.4, gxs));
-      ctx.closePath(); ctx.fillStyle = mix(W.ground[0], '#ffffff', 0.24); ctx.fill();
-      ctx.strokeStyle = mix(W.ground[1], '#ffffff', 0.5); ctx.lineWidth = Math.max(2, ppm * 0.2); ctx.stroke();
     }
 
     // --- sand bunkers and pond surfaces ---
@@ -1373,10 +1413,16 @@ window.addEventListener('error', function (e) {
     }
 
     // --- golfer + tee ---
-    if (sx(0) > -200 && sx(0) < VW + 200) {
+    if (sx(0) > -200 && sx(0) < VW + 200 && golferX === 0) {
       var ty0 = syw(0, 0);
       ctx.fillStyle = '#f7f2e8'; ctx.beginPath(); ctx.moveTo(sx(0) - 0.12 * ppm, ty0); ctx.lineTo(sx(0) + 0.12 * ppm, ty0); ctx.lineTo(sx(0) + 0.05 * ppm, ty0 - 0.35 * ppm); ctx.lineTo(sx(0) - 0.05 * ppm, ty0 - 0.35 * ppm); ctx.closePath(); ctx.fill();
-      drawGolfer(sx(-1.25), syw(0, -1.25) + 2, Math.max(8, ppm), SKINS[save.skins.sel], state === 'ready' ? -1 : golfSwing);
+    }
+    var gfx = golferX - 1.25 * golferFace;
+    if (sx(gfx) > -200 && sx(gfx) < VW + 200) {
+      ctx.save();
+      if (golferFace < 0) { ctx.translate(sx(gfx), 0); ctx.scale(-1, 1); ctx.translate(-sx(gfx), 0); }
+      drawGolfer(sx(gfx), syw(groundY(W, gfx), gfx) + 2, Math.max(8, ppm), SKINS[save.skins.sel], (state === 'ready' || state === 'putt') ? -1 : golfSwing);
+      ctx.restore();
     }
 
     // --- trail, particles, ball ---
@@ -1413,16 +1459,31 @@ window.addEventListener('error', function (e) {
       }
     }
 
-    // --- putt power meter ---
-    if (state === 'putt' && puttInfo) {
-      var mw = Math.min(0.56 * VW, 340), mh = 24, mx0 = (VW - mw) / 2, my0 = VH * 0.82;
-      ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(mx0 - 4, my0 - 4, mw + 8, mh + 8);
-      ctx.fillStyle = '#e8453c'; ctx.fillRect(mx0, my0, mw, mh);
-      ctx.fillStyle = '#35d36b'; ctx.fillRect(mx0 + mw * puttInfo.lo / puttInfo.vmax, my0, mw * (puttInfo.up - puttInfo.lo) / puttInfo.vmax, mh);
-      var mk = mx0 + mw * puttPower();
-      ctx.fillStyle = '#fff'; ctx.fillRect(mk - 3, my0 - 8, 6, mh + 16);
+    // --- chip aiming: pull back, dotted path shows the flight ---
+    if (state === 'putt') {
       ctx.font = '900 14px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff';
-      ctx.fillText('DOBITKA — dotknij, gdy znacznik jest w zielonym', VW / 2, my0 - 14);
+      ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 3;
+      var hint = puttDrag ? 'Puść, żeby uderzyć' : 'DOBITKA — przeciągnij palcem w tył (od dołka)';
+      ctx.strokeText(hint, VW / 2, VH * 0.2); ctx.fillText(hint, VW / 2, VH * 0.2);
+      if (puttDrag) {
+        var pdx = puttDrag.x1 - puttDrag.x0, pdy = puttDrag.y1 - puttDrag.y0;
+        if (Math.sqrt(pdx * pdx + pdy * pdy) >= 14) {
+          var pv = puttVelocity(pdx, pdy), path = puttPath(pv);
+          ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(puttDrag.x0, puttDrag.y0); ctx.lineTo(puttDrag.x1, puttDrag.y1); ctx.stroke();
+          ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(puttDrag.x0, puttDrag.y0, 6, 0, Math.PI * 2); ctx.fill();
+          for (i = 0; i < path.pts.length; i++) {
+            ctx.fillStyle = 'rgba(255,255,255,' + (0.95 - 0.5 * i / path.pts.length) + ')';
+            ctx.beginPath(); ctx.arc(sx(path.pts[i].x), syw(path.pts[i].y, path.pts[i].x), Math.max(2.5, 0.12 * ppm), 0, Math.PI * 2); ctx.fill();
+          }
+          if (path.landing) {
+            ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.ellipse(sx(path.landing.x), syw(path.landing.y, path.landing.x), Math.max(8, 0.9 * ppm), Math.max(3, 0.3 * ppm), 0, 0, Math.PI * 2); ctx.stroke();
+          }
+          ctx.fillStyle = '#fff'; ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 3;
+          ctx.strokeText(Math.round(pv.pw * 100) + '%', puttDrag.x1, puttDrag.y1 - 14); ctx.fillText(Math.round(pv.pw * 100) + '%', puttDrag.x1, puttDrag.y1 - 14);
+        }
+      }
     }
 
     // --- swing gauge next to the ball ---
@@ -1658,10 +1719,25 @@ window.addEventListener('error', function (e) {
   function tap() {
     if (anyModal() || performance.now() < readyAt) return;
     if (state === 'ready') beginSwing();
-    else if (state === 'putt') doPutt();
     else if (state === 'result' && !$('result').classList.contains('is-visible')) resetShot(); // after the upgrade detour
   }
-  cv.addEventListener('pointerdown', function (e) { e.preventDefault(); tap(); });
+  function canvasPt(e) { var r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+  cv.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    if (state === 'putt') {
+      if (performance.now() < readyAt) return;
+      var q = canvasPt(e); puttDrag = { x0: q.x, y0: q.y, x1: q.x, y1: q.y };
+      try { cv.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      return;
+    }
+    tap();
+  });
+  cv.addEventListener('pointermove', function (e) {
+    if (!puttDrag) return;
+    var q = canvasPt(e); puttDrag.x1 = q.x; puttDrag.y1 = q.y;
+  });
+  cv.addEventListener('pointerup', function () { releasePutt(); });
+  cv.addEventListener('pointercancel', function () { puttDrag = null; });
   document.addEventListener('keydown', function (e) {
     if (e.key === ' ' || e.key === 'Enter') {
       if ($('screen-game').classList.contains('is-active') && state !== 'flight' && !anyModal()) { e.preventDefault(); tap(); }
