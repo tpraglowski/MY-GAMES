@@ -310,8 +310,8 @@ window.addEventListener('error', function (e) {
         if (!nearHole(W, pxx, pxx)) list.push({ type: 'pole', x: pxx, w: 0.5, h: 14, gy: baseHeight(W, pxx), id: 'p' + k });
       }
       // a bird now and then — hit one for a coin bonus
-      if (k >= 3 && hash(k, 21, 7) < 0.4) {
-        list.push({ type: 'bird', x: k * CHUNK + 5 + hash(k, 22, 8) * 50, y: 12 + hash(k, 23, 9) * 70, key: k });
+      if (k >= 2 && hash(k, 21, 7) < 0.6) {
+        list.push({ type: 'bird', x: k * CHUNK + 5 + hash(k, 22, 8) * 50, y: 10 + hash(k, 23, 9) * 55, key: k });
       }
     }
     W.cache[k] = list;
@@ -401,7 +401,7 @@ window.addEventListener('error', function (e) {
         if (f.type === 'bird') {
           if (!b.hit[f.key]) {
             var dx = b.x - f.x, dy = b.y - f.y;
-            if (dx * dx + dy * dy < 3.2) {
+            if (dx * dx + dy * dy < 20) { // ~4.5 m radius: big, forgiving birds
               b.hit[f.key] = true; b.birds++;
               b.vy = Math.max(b.vy, 0) + 5; b.vx *= 0.93;
               b.feather = { x: f.x, y: f.y };
@@ -912,6 +912,33 @@ window.addEventListener('error', function (e) {
     ctx.stroke();
   }
 
+  // Big cartoon bird (faces right): body, belly, beak, eye, flapping wings.
+  function drawBigBird(x, y, u, flap) {
+    var w = flap * 0.9; // -0.9 .. 0.9: wings down .. up
+    ctx.save(); ctx.translate(x, y); ctx.lineJoin = 'round';
+    // far wing
+    ctx.fillStyle = '#3a6ea5';
+    ctx.beginPath(); ctx.moveTo(-0.3 * u, -0.1 * u); ctx.quadraticCurveTo(-1.0 * u, -(0.3 + w) * u, -1.8 * u, -(0.1 + w * 1.3) * u);
+    ctx.quadraticCurveTo(-1.1 * u, 0.1 * u, -0.1 * u, 0.2 * u); ctx.closePath(); ctx.fill();
+    // tail
+    ctx.fillStyle = '#2d557f'; ctx.beginPath(); ctx.moveTo(-0.9 * u, 0); ctx.lineTo(-1.7 * u, 0.15 * u); ctx.lineTo(-1.5 * u, 0.5 * u); ctx.lineTo(-0.8 * u, 0.35 * u); ctx.closePath(); ctx.fill();
+    // body
+    ctx.fillStyle = '#4a86c5'; ctx.beginPath(); ctx.ellipse(0, 0.1 * u, 1.0 * u, 0.62 * u, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#f4f1e8'; ctx.beginPath(); ctx.ellipse(0.1 * u, 0.32 * u, 0.7 * u, 0.34 * u, 0, 0, Math.PI * 2); ctx.fill();
+    // head
+    ctx.fillStyle = '#4a86c5'; ctx.beginPath(); ctx.arc(0.85 * u, -0.25 * u, 0.5 * u, 0, Math.PI * 2); ctx.fill();
+    // beak
+    ctx.fillStyle = '#ffb21e'; ctx.beginPath(); ctx.moveTo(1.25 * u, -0.35 * u); ctx.lineTo(1.85 * u, -0.12 * u); ctx.lineTo(1.25 * u, -0.05 * u); ctx.closePath(); ctx.fill();
+    // eye
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(1.0 * u, -0.38 * u, 0.17 * u, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1b1b1b'; ctx.beginPath(); ctx.arc(1.05 * u, -0.38 * u, 0.08 * u, 0, Math.PI * 2); ctx.fill();
+    // near wing (flaps)
+    ctx.fillStyle = '#5b9bd9';
+    ctx.beginPath(); ctx.moveTo(0.1 * u, 0); ctx.quadraticCurveTo(-0.5 * u, -(0.5 + w * 1.2) * u, -1.3 * u, -(0.25 + w * 1.7) * u);
+    ctx.quadraticCurveTo(-0.9 * u, 0.2 * u, 0.4 * u, 0.3 * u); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
   function drawTree(kind, sx, sy, w, h, ppm) {
     var pw = w * ppm, ph = h * ppm;
     if (kind === 'tree') {
@@ -989,10 +1016,13 @@ window.addEventListener('error', function (e) {
     });
     // collar + shirt sleeves
     ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(-0.3 * u, -2.9 * u); ctx.lineTo(0.05 * u, -2.5 * u); ctx.lineTo(0.4 * u, -2.9 * u); ctx.closePath(); ctx.fill();
-    // arms to the club
+    // arms: the hands travel with the club (up and back, down through the ball, up and over)
+    var ang = clubAngle(t), hx = 0.78, hy = -1.5, kk = (ang + 0.29) / 3.0, f2;
+    if (kk >= 0) { hx += (-0.45 - 0.78) * kk; hy += (-3.1 + 1.5) * kk; }
+    else { f2 = clamp(-kk / 0.57, 0, 1); hx += (0.35 - 0.78) * f2; hy += (-2.9 + 1.5) * f2; }
     ctx.strokeStyle = '#f4f1e8'; ctx.lineWidth = 0.42 * u;
-    ctx.beginPath(); ctx.moveTo(0.1 * u, -2.7 * u); ctx.lineTo(0.75 * u, -1.55 * u); ctx.stroke();
-    ctx.fillStyle = '#f2c9a0'; ctx.beginPath(); ctx.arc(0.78 * u, -1.5 * u, 0.22 * u, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0.1 * u, -2.7 * u); ctx.lineTo(hx * u, hy * u); ctx.stroke();
+    ctx.fillStyle = '#f2c9a0'; ctx.beginPath(); ctx.arc(hx * u, hy * u, 0.22 * u, 0, Math.PI * 2); ctx.fill();
     // head
     ctx.fillStyle = '#f2c9a0'; ctx.beginPath(); ctx.arc(0.1 * u, -3.5 * u, 0.62 * u, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(0.32 * u, -3.55 * u, 0.15 * u, 0.2 * u, 0, 0, Math.PI * 2); ctx.ellipse(-0.08 * u, -3.55 * u, 0.13 * u, 0.18 * u, 0, 0, Math.PI * 2); ctx.fill();
@@ -1004,8 +1034,7 @@ window.addEventListener('error', function (e) {
     ctx.fillStyle = skin.cap; ctx.beginPath(); ctx.arc(0.08 * u, -3.65 * u, 0.66 * u, Math.PI, 2 * Math.PI); ctx.closePath(); ctx.fill();
     ctx.beginPath(); ctx.ellipse(0.55 * u, -3.72 * u, 0.5 * u, 0.09 * u, 0.05, 0, Math.PI * 2); ctx.fill();
     // club (back-swing -> through impact -> follow-through)
-    var ang = clubAngle(t);
-    ctx.translate(0.78 * u, -1.5 * u);
+    ctx.translate(hx * u, hy * u);
     ctx.rotate(ang);
     ctx.strokeStyle = '#c3ccd4'; ctx.lineWidth = Math.max(2, 0.1 * u);
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 1.7 * u); ctx.stroke();
@@ -1233,9 +1262,7 @@ window.addEventListener('error', function (e) {
           ctx.beginPath(); ctx.moveTo(sx(f.x), syw(f.gy, f.x)); ctx.lineTo(sx(f.x), syw(f.gy + f.h, f.x)); ctx.stroke();
           ctx.fillStyle = '#e8453c'; ctx.fillRect(sx(f.x), syw(f.gy + f.h, f.x), 1.2 * ppm, 0.8 * ppm);
         } else if (f.type === 'bird' && !(ball.hit && ball.hit[f.key])) {
-          var bsz = Math.max(7, 1.6 * ppm);
-          drawBird(sx(f.x), syw(f.y + Math.sin(clock * 2 + f.key) * 0.8, f.x), bsz, Math.sin(clock * 9 + f.key), '#2f3b44');
-          ctx.fillStyle = '#2f3b44'; ctx.beginPath(); ctx.arc(sx(f.x), syw(f.y + Math.sin(clock * 2 + f.key) * 0.8, f.x), bsz * 0.22, 0, Math.PI * 2); ctx.fill();
+          drawBigBird(sx(f.x), syw(f.y + Math.sin(clock * 2 + f.key) * 0.8, f.x), Math.max(9, 1.9 * ppm), Math.sin(clock * 9 + f.key));
         }
       }
     }
