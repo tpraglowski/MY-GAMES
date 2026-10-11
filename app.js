@@ -305,7 +305,10 @@ async function initPlayView(gameId) {
     : 'Kategoria: ' + categoryLabel(game) + ' · Autor na Scratchu: ' + game.scratchAuthor + ' · Dodał: @' + game.addedBy;
 
   const frameWrap = document.createElement('div');
-  frameWrap.className = 'scratch-embed' + (isNative ? ' scratch-embed--native' : '');
+  // A native game can set aspect: 'portrait' on its game doc to get a tall
+  // (instead of the default 4:3 landscape) frame on desktop — see styles.css.
+  frameWrap.className = 'scratch-embed' + (isNative ? ' scratch-embed--native' : '') +
+    (isNative && game.aspect === 'portrait' ? ' scratch-embed--portrait' : '');
 
   const iframe = document.createElement('iframe');
   iframe.src = isNative ? game.path : 'https://scratch.mit.edu/projects/' + encodeURIComponent(game.scratchProjectId) + '/embed';

@@ -568,6 +568,14 @@ main {
   aspect-ratio: 4 / 3;
 }
 
+@media (min-width: 601px) {
+  .scratch-embed--native.scratch-embed--portrait {
+    max-width: 460px;
+    min-height: 0;
+    aspect-ratio: 3 / 4.2;
+  }
+}
+
 @media (max-width: 600px) {
   .scratch-embed--native {
     /* A fixed aspect-ratio here forced every native game into the same
