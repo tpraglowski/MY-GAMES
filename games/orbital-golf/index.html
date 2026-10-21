@@ -217,7 +217,7 @@ window.addEventListener('error', function (e) {
 <script>
 (function () {
   var DT = 1 / 120, MAXLV = 40, CHUNK = 60, BALL_R = 0.3;
-  var VERSION = '2.1', BUILD = '2026-10-21';
+  var VERSION = '2.2', BUILD = '2026-10-21';
   var GREEN_R = 24; // lighter putting green around each hole (flat; finish with a chip)
   var CURV_R = 900; // virtual planet radius (m) for the horizon curvature at altitude
 
@@ -248,22 +248,22 @@ window.addEventListener('error', function (e) {
 
   // ---------- Worlds ----------
   var WORLDS = [
-    { id: 'meadow', name: 'Łąka', g: 9.8, drag: 0.035, mu: 0.32, muSand: 1.7, e: 0.5, eSand: 0.06, skip: true,
+    { id: 'meadow', name: 'Łąka', g: 9.8, drag: 0.035, mu: 0.32, muSand: 1.7, e: 0.34, eSand: 0.06, skip: true,
       A1: 2.5, f1: 0.040, p1: 0.3, A2: 1.2, f2: 0.103, p2: 1.1, A3: 3.5, f3: 0.021, p3: 2.0,
       hz: { water: 0.14, sand: 0.2, trees: 0.25, pole: 0.1 }, tree: 'tree', house: 'cottage',
       sky: ['#46dfa0', '#c9fbe1'], hills: ['#7fe0aa', '#4cc784', '#2fa766'], ground: ['#2fa84f', '#5bd96d'], sandColor: '#f0d48a', waterColor: '#2b8be6',
       earn: 1, orbit: 1500, holes: [120, 420, 1100], spaceAlt: 900 },
-    { id: 'desert', name: 'Pustynia', g: 9.8, drag: 0.035, mu: 0.45, muSand: 1.7, e: 0.42, eSand: 0.08, skip: true,
+    { id: 'desert', name: 'Pustynia', g: 9.8, drag: 0.035, mu: 0.45, muSand: 1.7, e: 0.28, eSand: 0.08, skip: true,
       A1: 3.2, f1: 0.034, p1: 1.4, A2: 1.6, f2: 0.09, p2: 0.2, A3: 4.0, f3: 0.017, p3: 0.5,
       hz: { water: 0.08, sand: 0.4, trees: 0.25, pole: 0.1 }, tree: 'cactus', house: 'adobe',
       sky: ['#ff9a5a', '#ffe9c0'], hills: ['#f0b67a', '#dd9a58', '#c3803f'], ground: ['#d9a95a', '#f2cd7c'], sandColor: '#f7dc96', waterColor: '#1abc9c',
       earn: 2.2, orbit: 5000, holes: [250, 900, 2800], spaceAlt: 1000 },
-    { id: 'snow', name: 'Śnieżna kraina', g: 9.8, drag: 0.03, mu: 0.07, muSand: 0.9, e: 0.45, eSand: 0.1, skip: true,
+    { id: 'snow', name: 'Śnieżna kraina', g: 9.8, drag: 0.03, mu: 0.07, muSand: 0.9, e: 0.3, eSand: 0.1, skip: true,
       A1: 2.8, f1: 0.038, p1: 2.2, A2: 1.4, f2: 0.11, p2: 0.9, A3: 3.8, f3: 0.02, p3: 1.2,
       hz: { water: 0.14, sand: 0.2, trees: 0.3, pole: 0.1 }, tree: 'pine', house: 'cabin',
       sky: ['#6ec0ff', '#eaf6ff'], hills: ['#e4f1ff', '#bcd9f2', '#9cc3e6'], ground: ['#d3e3f2', '#ffffff'], sandColor: '#aed6f1', waterColor: '#4d9bd6',
       earn: 4, orbit: 10000, holes: [400, 1500, 5500], spaceAlt: 1100 },
-    { id: 'moon', name: 'Księżyc', g: 1.62, drag: 0.0, mu: 0.35, muSand: 1.2, e: 0.5, eSand: 0.1, skip: false,
+    { id: 'moon', name: 'Księżyc', g: 1.62, drag: 0.0, mu: 0.35, muSand: 1.2, e: 0.34, eSand: 0.1, skip: false,
       A1: 4.5, f1: 0.03, p1: 0.7, A2: 2.0, f2: 0.08, p2: 2.5, A3: 6.0, f3: 0.015, p3: 1.9,
       hz: { water: 0.14, sand: 0.2, trees: 0.25, pole: 0.1 }, tree: 'rock', house: null,
       sky: ['#04060f', '#10172c'], hills: ['#2a2f3d', '#3a4052', '#4b5266'], ground: ['#8a8d94', '#b4b7be'], sandColor: '#6b6e75', waterColor: '#161a26',
@@ -468,7 +468,7 @@ window.addEventListener('error', function (e) {
       var nl = Math.sqrt(1 + sl * sl), nx = -sl / nl, ny = 1 / nl;
       var onSand = surf && surf.type === 'sand';
       var mu = P.muScale * (onSand ? W.muSand : W.mu);
-      var e = Math.min(0.94, (onSand ? W.eSand : W.e) * P.bounce);
+      var e = Math.min(0.82, (onSand ? W.eSand : W.e) * P.bounce);
       b.y = gy;
       var vn = b.vx * nx + b.vy * ny;
       if (vn < 0) {
@@ -547,7 +547,7 @@ window.addEventListener('error', function (e) {
       v0: 22 * (1 + 0.12 * up.str) * (1 + 0.05 * spd) * ball.power,
       drag: W.drag * (1 - Math.min(0.6, 0.02 * spd)),
       muScale: 1 - Math.min(0.65, 0.022 * spd),
-      bounce: 1 + 0.05 * bnc,
+      bounce: 1 + 0.035 * bnc,
       earn: ball.earn,
     };
   }
@@ -1525,7 +1525,7 @@ window.addEventListener('error', function (e) {
   var UPG = [
     { id: 'str', icon: '💪', name: 'SIŁA', desc: function (l) { return 'Golfer silniejszy o ' + (l * 12) + '%'; } },
     { id: 'spd', icon: '⚡', name: 'SZYBKOŚĆ', desc: function (l) { return 'Piłka szybsza o ' + (l * 5) + '%'; } },
-    { id: 'bnc', icon: '🏀', name: 'ODBICIE', desc: function (l) { return 'Odbicia dalsze o ' + (l * 5) + '%'; } },
+    { id: 'bnc', icon: '🏀', name: 'ODBICIE', desc: function (l) { return 'Odbicia wyższe o ' + Math.round(l * 3.5) + '%'; } },
   ];
   var upgBuilt = false;
 
