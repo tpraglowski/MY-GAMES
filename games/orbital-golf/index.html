@@ -217,7 +217,7 @@ window.addEventListener('error', function (e) {
 <script>
 (function () {
   var DT = 1 / 120, MAXLV = 40, CHUNK = 60, BALL_R = 0.3;
-  var VERSION = '2.0', BUILD = '2026-10-21';
+  var VERSION = '2.1', BUILD = '2026-10-21';
   var GREEN_R = 24; // lighter putting green around each hole (flat; finish with a chip)
   var CURV_R = 900; // virtual planet radius (m) for the horizon curvature at altitude
 
@@ -670,6 +670,7 @@ window.addEventListener('error', function (e) {
   var swingT = 0, theta = ANG_CENTER, lastZone = ZONES[0], golfSwing = 1, acc = 0, trail = [], trailT = 0;
   var swingClock = 0, swingDur = 0.85, swingPerfect = false, swingTheta = ANG_CENTER, timeScale = 1;
   var readyAt = 0, clock = 0, particles = [], goalPulse = 0;
+  var bgX = 0, BG_PX = 5; // background scroll = distance flown (smoothed), BG_PX px per metre at parallax factor 1
   var puttInfo = null, puttClock = 0, puttV = null, puttDrag = null, golferX = 0, golferFace = 1; // chip: aim by pulling back
   var PUTT_SWING = 0.5;
   var stars = [], i0;
@@ -718,7 +719,7 @@ window.addEventListener('error', function (e) {
     cam.ppm = ppm; cam.x = -0.5 * VW / ppm; cam.y = readyCamY(ppm);
     $('result').classList.remove('is-visible');
     offerPutt(false);
-    golferX = 0; golferFace = 1; puttDrag = null;
+    golferX = 0; golferFace = 1; puttDrag = null; bgX = 0;
     $('ui').classList.remove('in-flight');
     $('dist-big').textContent = '0 m';
     setGoalBar(0);
@@ -944,6 +945,7 @@ window.addEventListener('error', function (e) {
 
   function update(dt) {
     clock += dt;
+    bgX += (Math.max(ball.x, 0) - bgX) * Math.min(1, dt * 8);
     if (state === 'ready') {
       swingT += dt;
       var tri = 1 - Math.abs(((swingT * 1.25) % 2) - 1);
@@ -1257,7 +1259,7 @@ window.addEventListener('error', function (e) {
       ctx.fillStyle = 'rgba(255,255,255,' + (0.85 * (1 - a)) + ')';
       for (i = 0; i < 8; i++) {
         var span = VW * 1.7;
-        var cx = (((i * 0.37 * span - cam.x * ppm * 0.12 + clock * 6) % span) + span) % span - VW * 0.3;
+        var cx = (((i * 0.37 * span - bgX * BG_PX * 0.12 + clock * 6) % span) + span) % span - VW * 0.3;
         var cy = VH * (0.08 + 0.06 * (i % 4));
         ctx.beginPath(); ctx.ellipse(cx, cy, 34, 11, 0, 0, Math.PI * 2); ctx.ellipse(cx + 22, cy + 3, 26, 9, 0, 0, Math.PI * 2); ctx.ellipse(cx - 20, cy + 4, 22, 8, 0, 0, Math.PI * 2); ctx.fill();
       }
@@ -1273,10 +1275,10 @@ window.addEventListener('error', function (e) {
     var hillFade = 1 - clamp(cam.alt / 120, 0, 1);
     if (hillFade > 0.02) {
       ctx.globalAlpha = hillFade;
-      var groundScreen = syw(baseHeight(W, xc), xc);
+      var groundScreen = baseY - (baseHeight(W, bgX) - cam.y) * ppm; // anchored to the ground at the ball, not the view centre
       for (var layer = 0; layer < 3; layer++) {
         var fac = 0.12 + layer * 0.16, lift = (0.2 - layer * 0.06) * VH, amp = (0.07 - layer * 0.012) * VH;
-        var scroll = cam.x * ppm * fac;
+        var scroll = bgX * BG_PX * fac; // by distance from the tee, independent of zoom
         ctx.fillStyle = W.hills[layer];
         ctx.beginPath(); ctx.moveTo(0, VH);
         var ys = [];
