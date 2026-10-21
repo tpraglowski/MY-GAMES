@@ -932,7 +932,7 @@ window.addEventListener('error', function (e) {
     clock += dt;
     if (state === 'ready') {
       swingT += dt;
-      var tri = 1 - Math.abs(((swingT * 0.8) % 2) - 1);
+      var tri = 1 - Math.abs(((swingT * 1.25) % 2) - 1);
       // smootherstep easing: the arrow crawls at the edges and whips through the
       // middle (up to ~1.9x speed), so the perfect zone is hard to catch
       tri = tri * tri * tri * (tri * (tri * 6 - 15) + 10);
