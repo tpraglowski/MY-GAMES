@@ -251,7 +251,7 @@ window.addEventListener('error', function (e) {
 <script>
 (function () {
   var DT = 1 / 120, MAXLV = 40, CHUNK = 60, BALL_R = 0.3;
-  var VERSION = '2.5', BUILD = '2026-10-21';
+  var VERSION = '2.6', BUILD = '2026-10-21';
   var GREEN_R = 24; // lighter putting green around each hole (flat; finish with a chip)
   var CURV_R = 900; // virtual planet radius (m) for the horizon curvature at altitude
 
@@ -302,6 +302,11 @@ window.addEventListener('error', function (e) {
       hz: { water: 0.14, sand: 0.2, trees: 0.25, pole: 0.1 }, tree: 'rock', house: null,
       sky: ['#04060f', '#10172c'], hills: ['#2a2f3d', '#3a4052', '#4b5266'], ground: ['#8a8d94', '#b4b7be'], sandColor: '#6b6e75', waterColor: '#161a26',
       earn: 8, orbit: 40000, holes: [1500, 8000, 25000], spaceAlt: 0 },
+    { id: 'mars', name: 'Mars', g: 3.72, drag: 0.012, mu: 0.4, muSand: 1.5, e: 0.34, eSand: 0.08, skip: false, noBirds: true,
+      A1: 4.0, f1: 0.028, p1: 0.4, A2: 2.2, f2: 0.07, p2: 1.6, A3: 7.0, f3: 0.012, p3: 0.8,
+      hz: { water: 0.1, sand: 0.25, trees: 0.28, pole: 0.1 }, tree: 'redrock', house: 'dome',
+      sky: ['#c4663a', '#f6cba2'], hills: ['#c2693f', '#a4502d', '#85391f'], ground: ['#b9522e', '#e08a5a'], sandColor: '#7d3a24', waterColor: '#58a3b8',
+      earn: 16, orbit: 30000, holes: [1200, 7000, 20000], spaceAlt: 1400 },
   ];
   WORLDS.forEach(function (W) {
     W.holeY = W.holes.map(function (hx) { return baseHeight(W, hx); });
@@ -358,7 +363,7 @@ window.addEventListener('error', function (e) {
         if (!nearHole(W, pxx, pxx)) list.push({ type: 'pole', x: pxx, w: 0.5, h: 14, gy: baseHeight(W, pxx), id: 'p' + k });
       }
       // a bird now and then — hit one for a coin bonus
-      if (k >= 2 && hash(k, 21, 7) < 0.6) {
+      if (k >= 2 && !W.noBirds && hash(k, 21, 7) < 0.6) {
         list.push({ type: 'bird', x: k * CHUNK + 5 + hash(k, 22, 8) * 50, y: 10 + hash(k, 23, 9) * 55, key: k });
       }
     }
@@ -613,7 +618,7 @@ window.addEventListener('error', function (e) {
   function freshSave() {
     return { v: 1, coins: 0, gems: 0, up: { str: 0, spd: 0, bnc: 0 },
       balls: { owned: ['std'], sel: 'std' }, skins: { owned: [0], sel: 0 },
-      unlocked: 0, world: 0, best: [0, 0, 0, 0], orbits: [false, false, false, false], shots: 0, wheelAt: 0 };
+      unlocked: 0, world: 0, best: WORLDS.map(function () { return 0; }), orbits: WORLDS.map(function () { return false; }), shots: 0, wheelAt: 0 };
   }
   function saveKey() {
     var user = '';
@@ -1134,6 +1139,10 @@ window.addEventListener('error', function (e) {
         ctx.beginPath(); ctx.moveTo(sx - wd, y1); ctx.lineTo(sx + wd, y1); ctx.lineTo(sx, y1 - ph * 0.42); ctx.closePath(); ctx.fill();
         ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(sx - wd * 0.4, y1 - ph * 0.26); ctx.lineTo(sx + wd * 0.4, y1 - ph * 0.26); ctx.lineTo(sx, y1 - ph * 0.42); ctx.closePath(); ctx.fill();
       }
+    } else if (kind === 'redrock') {
+      ctx.fillStyle = '#7a3a22';
+      ctx.beginPath(); ctx.moveTo(sx - pw * 0.8, sy); ctx.lineTo(sx - pw * 0.4, sy - ph * 0.65); ctx.lineTo(sx + pw * 0.15, sy - ph); ctx.lineTo(sx + pw * 0.55, sy - ph * 0.55); ctx.lineTo(sx + pw * 0.8, sy); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#a2502e'; ctx.beginPath(); ctx.moveTo(sx - pw * 0.4, sy - ph * 0.65); ctx.lineTo(sx + pw * 0.15, sy - ph); ctx.lineTo(sx - pw * 0.05, sy - ph * 0.3); ctx.closePath(); ctx.fill();
     } else { // moon rock
       ctx.fillStyle = '#6e7178';
       ctx.beginPath(); ctx.moveTo(sx - pw * 0.8, sy); ctx.lineTo(sx - pw * 0.35, sy - ph * 0.7); ctx.lineTo(sx + pw * 0.3, sy - ph); ctx.lineTo(sx + pw * 0.8, sy); ctx.closePath(); ctx.fill();
@@ -1145,6 +1154,14 @@ window.addEventListener('error', function (e) {
     var wall = kind === 'adobe' ? '#e0b583' : (kind === 'cabin' ? '#8d5a3b' : ['#fff1d6', '#d9ecff', '#ffe0e0'][v]);
     var roof = kind === 'adobe' ? '#c46b3a' : (kind === 'cabin' ? '#e8f1f8' : ['#d9534f', '#3b6fb6', '#8a5a9c'][v]);
     var w = 7 * s, h = 4.2 * s;
+    if (kind === 'dome') { // Mars base: a glass dome on a low hull
+      ctx.fillStyle = '#d9dde2'; ctx.fillRect(sx - w / 2, sy - h * 0.45, w, h * 0.45);
+      ctx.fillStyle = 'rgba(170,225,255,0.8)'; ctx.beginPath(); ctx.arc(sx, sy - h * 0.45, w * 0.42, Math.PI, 2 * Math.PI); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#eef3f6'; ctx.lineWidth = Math.max(1.5, 0.12 * s); ctx.stroke();
+      ctx.fillStyle = '#7e8a95'; ctx.fillRect(sx - 0.6 * s, sy - h * 0.45, 1.2 * s, h * 0.45);
+      ctx.fillStyle = '#e8453c'; ctx.fillRect(sx + w * 0.3, sy - h * 0.45 - 1.4 * s, 0.14 * s, 1.4 * s);
+      return;
+    }
     ctx.fillStyle = wall; ctx.fillRect(sx - w / 2, sy - h, w, h);
     ctx.fillStyle = roof;
     if (kind === 'adobe') { ctx.fillRect(sx - w / 2 - 0.3 * s, sy - h - 0.6 * s, w + 0.6 * s, 0.8 * s); }
@@ -1297,7 +1314,7 @@ window.addEventListener('error', function (e) {
       }
     }
     // clouds (parallax)
-    if (a < 0.95 && W.id !== 'moon') {
+    if (a < 0.95 && W.id !== 'moon' && W.id !== 'mars') {
       ctx.fillStyle = 'rgba(255,255,255,' + (0.85 * (1 - a)) + ')';
       for (i = 0; i < 8; i++) {
         var span = VW * 1.7;
@@ -1337,7 +1354,7 @@ window.addEventListener('error', function (e) {
           var ti = Math.floor((tp + scroll) / step), idx = clamp(Math.round(tp / 6), 0, ys.length - 1);
           var h1 = hash(ti, layer, 77);
           if (layer === 1 && W.house && h1 > 0.78) { drawHouse(W.house, ((ti % 3) + 3) % 3, tp, ys[idx] + 2, 3.2 * VH / 600); continue; }
-          if (h1 < 0.6 && W.id !== 'moon') {
+          if (h1 < 0.6 && W.id !== 'moon' && W.id !== 'mars') {
             var tr = (7 + h1 * 7) * (VH / 700);
             ctx.fillStyle = layer === 0 ? 'rgba(40,120,80,0.55)' : 'rgba(25,100,60,0.75)';
             ctx.fillRect(tp - 1.5, ys[idx] - tr * 0.4, 3, tr * 0.5);
@@ -1412,7 +1429,7 @@ window.addEventListener('error', function (e) {
     for (px = 0; px <= VW + 4; px += 4) { var gx2 = x0 + px / ppm, yy2 = syw(groundY(W, gx2), gx2); if (px === 0) ctx.moveTo(px, yy2); else ctx.lineTo(px, yy2); }
     ctx.strokeStyle = W.ground[1]; ctx.lineWidth = Math.max(4, ppm * 0.45); ctx.lineJoin = 'round'; ctx.stroke();
     if (curve > 0.02) { // atmosphere haze along the curved horizon
-      ctx.strokeStyle = 'rgba(150,215,255,' + (0.35 * curve) + ')'; ctx.lineWidth = 16 + 18 * curve; ctx.stroke();
+      ctx.strokeStyle = (W.id === 'mars' ? 'rgba(255,175,130,' : 'rgba(150,215,255,') + (0.35 * curve) + ')'; ctx.lineWidth = 16 + 18 * curve; ctx.stroke();
     }
 
     // --- sand bunkers and pond surfaces ---
@@ -1523,7 +1540,7 @@ window.addEventListener('error', function (e) {
 
     // --- foreground grass tufts ---
     if (W.id !== 'moon') {
-      ctx.strokeStyle = W.id === 'snow' ? 'rgba(255,255,255,0.8)' : 'rgba(34,140,60,0.9)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      ctx.strokeStyle = W.id === 'snow' ? 'rgba(255,255,255,0.8)' : (W.id === 'mars' ? 'rgba(120,48,26,0.9)' : 'rgba(34,140,60,0.9)'); ctx.lineWidth = 2; ctx.lineCap = 'round';
       var tuft = Math.max(8, 1.6 * ppm), j0 = Math.floor(x0 * ppm / (tuft * 4));
       for (var j = j0; j * tuft * 4 / ppm < x1; j++) {
         var tx = j * tuft * 4 / ppm + hash(j, 5, 5) * 2;
@@ -1688,7 +1705,7 @@ window.addEventListener('error', function (e) {
         var open = idx <= save.unlocked, sel = save.world === idx, btn;
         if (open) btn = buyBtn(sel ? 'Tu grasz' : 'Graj tutaj', !sel, function () { setWorld(idx); $('shop').classList.remove('is-open'); });
         else btn = buyBtn('🔒', false, null);
-        var icon = ['🌳', '🏜️', '❄️', '🌕'][idx];
+        var icon = ['🌳', '🏜️', '❄️', '🌕', '🔴'][idx];
         var desc = open ? 'Orbita: ' + fmt(w.orbit) + ' m · rekord ' + fmt(save.best[idx]) + ' m · zarobki ×' + w.earn
           : 'Osiągnij orbitę w poprzednim świecie';
         body.appendChild(rowFor(icon, w.name, desc, btn, sel));
