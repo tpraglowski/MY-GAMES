@@ -908,9 +908,11 @@ window.addEventListener('error', function (e) {
     var sp = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
     var cnt = clamp(Math.round(sp / 25), 2, 6);
     for (var i = 0; i < cnt && particles.length < 500; i++) {
-      particles.push({ x: ball.x + (Math.random() - 0.5) * 0.5, y: ball.y + (Math.random() - 0.5) * 0.5,
-        vx: -ball.vx * 0.04 + (Math.random() - 0.5) * 4, vy: -ball.vy * 0.04 + (Math.random() - 0.5) * 4,
-        t: 0, life: 0.45 + Math.random() * 0.55, col: FIRE_COLS[Math.floor(Math.random() * 3)], r: 0.25 + Math.random() * 0.3, g: -1, px: 3 });
+      // spawn behind the ball (against its velocity) and drawn underneath it
+      var bk = 0.3 + Math.random() * 0.6, ux = ball.vx / (sp || 1), uy = ball.vy / (sp || 1);
+      particles.push({ x: ball.x - ux * bk + (Math.random() - 0.5) * 0.3, y: ball.y - uy * bk + (Math.random() - 0.5) * 0.3,
+        vx: -ball.vx * 0.08 + (Math.random() - 0.5) * 3, vy: -ball.vy * 0.08 + (Math.random() - 0.5) * 3,
+        t: 0, life: 0.45 + Math.random() * 0.55, col: FIRE_COLS[Math.floor(Math.random() * 3)], r: 0.25 + Math.random() * 0.3, g: -1, px: 3, back: true });
     }
   }
   function spawnBurst(x, y, perfect) {
@@ -1434,6 +1436,13 @@ window.addEventListener('error', function (e) {
       ctx.beginPath(); ctx.arc(sx(trail[i].x), syw(trail[i].y, trail[i].x), 2.5, 0, Math.PI * 2); ctx.fill();
     }
     var br = Math.max(0.4 * ppm, 6), bx = sx(ball.x), by = syw(ball.y, ball.x) - br * 0.6;
+    for (i = 0; i < particles.length; i++) { // flame trail: behind the ball
+      var pb = particles[i];
+      if (!pb.back) continue;
+      ctx.globalAlpha = clamp(1 - pb.t / pb.life, 0, 1);
+      ctx.fillStyle = pb.col; ctx.beginPath(); ctx.arc(sx(pb.x), syw(pb.y, pb.x), Math.max(pb.px || 2, pb.r * ppm), 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
     if (ball.fire) { // burning ball glow
       var fg = ctx.createRadialGradient(bx, by, br * 0.3, bx, by, br * 3.4);
       fg.addColorStop(0, 'rgba(255,210,60,0.95)'); fg.addColorStop(0.5, 'rgba(255,110,20,0.5)'); fg.addColorStop(1, 'rgba(255,60,0,0)');
@@ -1445,6 +1454,7 @@ window.addEventListener('error', function (e) {
     ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.arc(bx - br * 0.3, by - br * 0.3, br * 0.28, 0, Math.PI * 2); ctx.fill();
     for (i = 0; i < particles.length; i++) {
       var pt = particles[i];
+      if (pt.back) continue;
       ctx.globalAlpha = clamp(1 - pt.t / pt.life, 0, 1);
       ctx.fillStyle = pt.col; ctx.beginPath(); ctx.arc(sx(pt.x), syw(pt.y, pt.x), Math.max(pt.px || 2, pt.r * ppm), 0, Math.PI * 2); ctx.fill();
     }
