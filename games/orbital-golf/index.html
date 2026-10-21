@@ -251,7 +251,7 @@ window.addEventListener('error', function (e) {
 <script>
 (function () {
   var DT = 1 / 120, MAXLV = 40, CHUNK = 60, BALL_R = 0.3;
-  var VERSION = '2.4', BUILD = '2026-10-21';
+  var VERSION = '2.5', BUILD = '2026-10-21';
   var GREEN_R = 24; // lighter putting green around each hole (flat; finish with a chip)
   var CURV_R = 900; // virtual planet radius (m) for the horizon curvature at altitude
 
@@ -413,6 +413,13 @@ window.addEventListener('error', function (e) {
     return y;
   }
 
+  // Ground level under a tree/pole, taken from the real terrain (sand, ponds and greens
+  // reshape it) and cached on the feature; sunk a little so slopes never show a gap.
+  function gyOf(Wd, f) {
+    if (f.gyReal === undefined) f.gyReal = groundY(Wd, f.x) - 0.2;
+    return f.gyReal;
+  }
+
   function surfaceAt(W, x) {
     var k = Math.floor(x / CHUNK);
     for (var kk = k - 1; kk <= k + 1; kk++) {
@@ -459,10 +466,10 @@ window.addEventListener('error', function (e) {
         }
         if (f.type !== 'tree' && f.type !== 'pole') continue;
         if (b.destroyed[f.id]) continue;
-        var top = f.gy + f.h, hw = f.w / 2 + BALL_R;
-        if (b.x > f.x - hw && b.x < f.x + hw && b.y < top && b.y > f.gy - 1) {
+        var fgy = gyOf(W, f), top = fgy + f.h, hw = f.w / 2 + BALL_R;
+        if (b.x > f.x - hw && b.x < f.x + hw && b.y < top && b.y > fgy - 1) {
           if (b.fire && f.type === 'tree') { // a burning ball goes straight through
-            b.destroyed[f.id] = true; b.trees++; b.crash = { x: f.x, y: f.gy + f.h * 0.5 };
+            b.destroyed[f.id] = true; b.trees++; b.crash = { x: f.x, y: fgy + f.h * 0.5 };
             continue;
           }
           if (b.vy < 0 && b.y > top - 0.9) {
@@ -1348,9 +1355,14 @@ window.addEventListener('error', function (e) {
     for (k = k0; k <= k1; k++) {
       var sc = chunkScenery(W, k);
       for (i = 0; i < sc.length; i++) {
-        var o = sc[i], oy = syw(groundY(W, o.x) + 0.4, o.x);
-        if (o.type === 'house') drawHouse(W.house, o.v, sx(o.x), oy, ppm * 0.9);
+        var o = sc[i], oy;
+        if (o.type === 'house') {
+          var gl = Math.min(groundY(W, o.x - 3.4), groundY(W, o.x), groundY(W, o.x + 3.4));
+          oy = syw(gl - 0.35, o.x);
+          drawHouse(W.house, o.v, sx(o.x), oy, ppm * 0.9);
+        }
         else { // faded and smaller than the real (solid) trees, so they read as background
+          oy = syw(groundY(W, o.x) - 0.3, o.x);
           ctx.globalAlpha = 0.55; drawTree(W.tree, sx(o.x), oy, 2.4 * o.s * 0.7, 7 * o.s * 0.7, ppm); ctx.globalAlpha = 1;
         }
       }
@@ -1434,11 +1446,11 @@ window.addEventListener('error', function (e) {
       fs = chunkFeatures(W, k);
       for (i = 0; i < fs.length; i++) {
         f = fs[i];
-        if (f.type === 'tree') { if (!ball.destroyed[f.id]) drawTree(W.tree, sx(f.x), syw(f.gy, f.x), f.w, f.h, ppm); }
+        if (f.type === 'tree') { if (!ball.destroyed[f.id]) drawTree(W.tree, sx(f.x), syw(gyOf(W, f), f.x), f.w, f.h, ppm); }
         else if (f.type === 'pole') {
           ctx.strokeStyle = '#dfe6ea'; ctx.lineWidth = Math.max(2, f.w * ppm);
-          ctx.beginPath(); ctx.moveTo(sx(f.x), syw(f.gy, f.x)); ctx.lineTo(sx(f.x), syw(f.gy + f.h, f.x)); ctx.stroke();
-          ctx.fillStyle = '#e8453c'; ctx.fillRect(sx(f.x), syw(f.gy + f.h, f.x), 1.2 * ppm, 0.8 * ppm);
+          var pgy = gyOf(W, f); ctx.beginPath(); ctx.moveTo(sx(f.x), syw(pgy, f.x)); ctx.lineTo(sx(f.x), syw(pgy + f.h, f.x)); ctx.stroke();
+          ctx.fillStyle = '#e8453c'; ctx.fillRect(sx(f.x), syw(pgy + f.h, f.x), 1.2 * ppm, 0.8 * ppm);
         } else if (f.type === 'bird' && !(ball.hit && ball.hit[f.key])) {
           drawBigBird(sx(f.x), syw(f.y + Math.sin(clock * 2 + f.key) * 0.8, f.x), Math.max(9, 1.9 * ppm), Math.sin(clock * 9 + f.key));
         }
