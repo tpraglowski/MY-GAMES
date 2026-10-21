@@ -226,7 +226,6 @@ window.addEventListener('error', function (e) {
       <div class="r-buttons">
         <button class="btn btn--green" id="r-next" type="button">Dalej →</button>
         <button class="btn" id="r-putt" type="button" style="display:none">⛳ Dobitka</button>
-        <button class="btn" id="r-shop" type="button">Ulepsz</button>
       </div>
     </div>
 
@@ -252,7 +251,7 @@ window.addEventListener('error', function (e) {
 <script>
 (function () {
   var DT = 1 / 120, MAXLV = 40, CHUNK = 60, BALL_R = 0.3;
-  var VERSION = '2.3', BUILD = '2026-10-21';
+  var VERSION = '2.4', BUILD = '2026-10-21';
   var GREEN_R = 24; // lighter putting green around each hole (flat; finish with a chip)
   var CURV_R = 900; // virtual planet radius (m) for the horizon curvature at altitude
 
@@ -1819,7 +1818,6 @@ window.addEventListener('error', function (e) {
   $('btn-gear').addEventListener('click', function () { refreshMenu(); showScreen('menu'); });
   $('b-club').addEventListener('click', function () { openShop('skin'); });
   $('b-star').addEventListener('click', function () { openShop('world'); });
-  $('r-shop').addEventListener('click', function () { $('result').classList.remove('is-visible'); banner('Ulepszaj, potem dotknij ekran'); });
   $('shop-close').addEventListener('click', function () { $('shop').classList.remove('is-open'); updateHud(); });
   $('b-gift').addEventListener('click', openWheel);
   $('wheel-close').addEventListener('click', closeWheel);
