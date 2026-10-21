@@ -26,6 +26,14 @@
   #screen-menu .btn { min-width: 230px; }
   #screen-menu .btn--ghost { color: #06402a; border-color: rgba(6,64,42,0.4); }
 
+  #menu-ver { color: #0b5a3b; opacity: 0.7; font-size: 0.78rem; font-weight: 700; }
+  .dbg-toggle { display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-weight: 800; font-size: 0.9rem; color: #06402a; user-select: none; }
+  .dbg-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+  .dbg-toggle .sw { width: 46px; height: 26px; border-radius: 999px; background: rgba(6,64,42,0.3); position: relative; transition: background 0.2s; border: 2px solid rgba(6,64,42,0.45); box-sizing: border-box; }
+  .dbg-toggle .sw::after { content: ''; position: absolute; left: 2px; top: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.35); transition: transform 0.2s; }
+  .dbg-toggle input:checked + .sw { background: #f0a500; }
+  .dbg-toggle input:checked + .sw::after { transform: translateX(20px); }
+  #dbg { position: absolute; right: 0.5rem; top: 3.4rem; margin: 0; padding: 0.35rem 0.5rem; background: rgba(0,0,0,0.62); color: #b8ffcf; font: 600 10.5px/1.35 ui-monospace, Consolas, monospace; border-radius: 8px; pointer-events: none; display: none; white-space: pre; text-shadow: none; z-index: 4; max-width: 62vw; overflow: hidden; }
   #stage { flex: 1; min-height: 0; position: relative; overflow: hidden; background: #4de8a6; }
   #cv { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; touch-action: none; }
   #ui { position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none; color: #fff; text-shadow: 0 2px 3px rgba(0,0,0,0.45); }
@@ -148,6 +156,8 @@ window.addEventListener('error', function (e) {
   <div id="menu-stats"></div>
   <button class="btn" id="btn-play" type="button">▶ Graj</button>
   <button class="btn btn--ghost" id="btn-reset" type="button">Zresetuj postęp</button>
+  <label class="dbg-toggle"><input type="checkbox" id="dbg-check"><span class="sw"></span><span>Tryb debug</span></label>
+  <div id="menu-ver"></div>
 </section>
 
 <section id="screen-game" class="screen">
@@ -160,6 +170,7 @@ window.addEventListener('error', function (e) {
         <div class="pill"><span class="coin-ico"></span><b id="hud-coins">0</b></div>
         <div class="pill"><span class="gem-ico">💎</span><b id="hud-gems">0</b></div>
       </div>
+      <pre id="dbg"></pre>
       <div id="top-center"><div id="dist-big">0 m</div><div id="goal-text"></div></div>
       <div id="top-right">
         <div id="goal-bar"><div id="goal-fill"></div><div id="goal-golfer">🏌️</div><div id="goal-flag">🚩</div></div>
@@ -206,6 +217,7 @@ window.addEventListener('error', function (e) {
 <script>
 (function () {
   var DT = 1 / 120, MAXLV = 40, CHUNK = 60, BALL_R = 0.3;
+  var VERSION = '2.0', BUILD = '2026-10-21';
   var GREEN_R = 24; // lighter putting green around each hole (flat; finish with a chip)
   var CURV_R = 900; // virtual planet radius (m) for the horizon curvature at altitude
 
@@ -1789,6 +1801,44 @@ window.addEventListener('error', function (e) {
     lastTs = ts;
     update(dt);
     draw();
+    if (debugOn) updateDbg(dt);
+  }
+
+  // ---------- Debug mode (switch in the menu) ----------
+  var debugOn = false, dbgT = 0, fpsAvg = 60;
+  try { debugOn = localStorage.getItem('mg_orbgolf_debug') === '1'; } catch (e0) { /* ignore */ }
+  $('dbg-check').checked = debugOn;
+  $('menu-ver').textContent = 'Wersja ' + VERSION + ' (' + BUILD + ')';
+  $('dbg-check').addEventListener('change', function () {
+    debugOn = $('dbg-check').checked;
+    try { localStorage.setItem('mg_orbgolf_debug', debugOn ? '1' : '0'); } catch (e1) { /* ignore */ }
+    if (!debugOn) $('dbg').style.display = 'none';
+  });
+  function f1(v) { return (Math.round(v * 10) / 10).toFixed(1); }
+  function updateDbg(dt) {
+    if (dt > 0) fpsAvg += (1 / dt - fpsAvg) * 0.1;
+    dbgT += dt;
+    if (dbgT < 0.12) return;
+    dbgT = 0;
+    var spd = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy), gy = groundY(W, ball.x);
+    var st = P || statsFor(W, save.up, curBall());
+    var lines = [
+      'Orbitalny Golf v' + VERSION + ' (' + BUILD + ')',
+      'stan: ' + state + '   fps: ' + Math.round(fpsAvg),
+      'świat: ' + W.name + ' (g=' + W.g + ')',
+      'kąt: ' + f1(theta) + '°  strefa: ' + (lastZone ? lastZone.name : '-') + ' x' + (lastZone ? lastZone.mult : '-'),
+      'piłka x/y: ' + f1(ball.x) + ' / ' + f1(ball.y) + ' m',
+      'wys. nad ziemią: ' + f1(Math.max(0, ball.y - gy)) + ' m',
+      'prędkość: ' + f1(spd) + ' m/s (vx ' + f1(ball.vx) + ', vy ' + f1(ball.vy) + ')',
+      'v0: ' + f1(st.v0) + '  opór: ' + st.drag.toFixed(3) + '  tarcie x' + st.muScale.toFixed(2) + '  odb. x' + st.bounce.toFixed(2),
+      'ogień: ' + (ball.fire ? 'TAK' : 'nie') + '  drzewa: ' + ball.trees + '  ptaki: ' + ball.birds,
+      'czas lotu: ' + f1(ball.t) + ' s  skala czasu: x' + timeScale.toFixed(2),
+      'kamera: ppm ' + f1(cam.ppm) + '  x ' + f1(cam.x) + '  wys ' + f1(cam.alt),
+      'ulepszenia: siła ' + save.up.str + ' / szyb. ' + save.up.spd + ' / odb. ' + save.up.bnc,
+      'cząsteczki: ' + particles.length + '  ekran: ' + VW + 'x' + VH + ' @' + dpr
+    ];
+    $('dbg').textContent = lines.join('\n');
+    $('dbg').style.display = 'block';
   }
 
   refreshMenu();
