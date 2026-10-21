@@ -26,6 +26,16 @@
   #screen-menu .btn { min-width: 230px; }
   #screen-menu .btn--ghost { color: #06402a; border-color: rgba(6,64,42,0.4); }
 
+  .amodal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 50; padding: 0.8rem; }
+  .amodal.is-open { display: flex; }
+  .abox { background: #0d2b3e; border: 3px solid #f0a500; border-radius: 16px; padding: 1rem; width: min(100%, 420px); max-height: 100%; overflow: auto; color: #eef3fb; }
+  .abox h2 { margin: 0 0 0.2rem; font-size: 1.25rem; color: #ffd166; }
+  .abox .ahint { margin: 0 0 0.7rem; font-size: 0.78rem; color: #9fb4c8; }
+  .agrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 0.7rem; margin-bottom: 0.8rem; }
+  .agrid label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.78rem; font-weight: 800; color: #cfe3f5; }
+  .agrid input, .agrid select { padding: 0.4rem 0.5rem; border-radius: 8px; border: 2px solid #2d5878; background: #0a1f2e; color: #fff; font: 700 0.95rem inherit; min-width: 0; }
+  .abtns { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .abtns .btn { flex: 1 1 auto; }
   #menu-ver { color: #0b5a3b; opacity: 0.7; font-size: 0.78rem; font-weight: 700; }
   .dbg-toggle { display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-weight: 800; font-size: 0.9rem; color: #06402a; user-select: none; }
   .dbg-toggle input { position: absolute; opacity: 0; pointer-events: none; }
@@ -156,9 +166,34 @@ window.addEventListener('error', function (e) {
   <div id="menu-stats"></div>
   <button class="btn" id="btn-play" type="button">▶ Graj</button>
   <button class="btn btn--ghost" id="btn-reset" type="button">Zresetuj postęp</button>
+  <button class="btn btn--ghost" id="btn-admin" type="button" style="display:none">🛠 Panel administratora</button>
   <label class="dbg-toggle"><input type="checkbox" id="dbg-check"><span class="sw"></span><span>Tryb debug</span></label>
   <div id="menu-ver"></div>
 </section>
+
+<div id="admin-modal" class="amodal">
+  <div class="abox">
+    <h2>🛠 Panel administratora</h2>
+    <p class="ahint" id="admin-user"></p>
+    <div class="agrid">
+      <label>Monety 🪙<input type="number" id="a-coins" min="0" step="1"></label>
+      <label>Diamenty 💎<input type="number" id="a-gems" min="0" step="1"></label>
+      <label>Siła (poziom)<input type="number" id="a-str" min="0" step="1"></label>
+      <label>Szybkość (poziom)<input type="number" id="a-spd" min="0" step="1"></label>
+      <label>Odbicie (poziom)<input type="number" id="a-bnc" min="0" step="1"></label>
+      <label>Liczba strzałów<input type="number" id="a-shots" min="0" step="1"></label>
+      <label>Odblokowane światy<select id="a-unlocked"></select></label>
+      <label>Aktualny świat<select id="a-world"></select></label>
+    </div>
+    <div class="abtns">
+      <button class="btn btn--green" id="a-save" type="button">Zapisz</button>
+      <button class="btn" id="a-max" type="button">Wszystko na max</button>
+      <button class="btn" id="a-items" type="button">Wszystkie piłki i skórki</button>
+      <button class="btn" id="a-wheel" type="button">Reset koła</button>
+      <button class="btn btn--ghost" id="a-close" type="button" style="color:#cfe3f5;border-color:#2d5878">Zamknij</button>
+    </div>
+  </div>
+</div>
 
 <section id="screen-game" class="screen">
   <div id="stage">
@@ -217,7 +252,7 @@ window.addEventListener('error', function (e) {
 <script>
 (function () {
   var DT = 1 / 120, MAXLV = 40, CHUNK = 60, BALL_R = 0.3;
-  var VERSION = '2.2', BUILD = '2026-10-21';
+  var VERSION = '2.3', BUILD = '2026-10-21';
   var GREEN_R = 24; // lighter putting green around each hole (flat; finish with a chip)
   var CURV_R = 900; // virtual planet radius (m) for the horizon curvature at altitude
 
@@ -643,6 +678,7 @@ window.addEventListener('error', function (e) {
       ? 'Rekord: ' + fmt(best) + ' m · 🪙 ' + fmt(save.coins) + ' · 💎 ' + save.gems
       : '';
     $('btn-play').textContent = save.shots > 0 ? '▶ Kontynuuj' : '▶ Graj';
+    $('btn-admin').style.display = isAdmin() ? '' : 'none';
   }
 
   function resize() {
@@ -1805,6 +1841,55 @@ window.addEventListener('error', function (e) {
     draw();
     if (debugOn) updateDbg(dt);
   }
+
+  // ---------- Admin panel (account "tpraglowski" only) ----------
+  var ADMIN_USER = 'tpraglowski';
+  function currentUser() { try { return (localStorage.getItem('mg_session') || '').trim().toLowerCase(); } catch (e) { return ''; } }
+  function isAdmin() { return currentUser() === ADMIN_USER; }
+  function adminSetup() {
+    var su = $('a-unlocked'), sw = $('a-world');
+    su.innerHTML = ''; sw.innerHTML = '';
+    WORLDS.forEach(function (w, i) {
+      su.appendChild(new Option(i + 1 + ' — ' + w.name, String(i)));
+      sw.appendChild(new Option(w.name, String(i)));
+    });
+  }
+  function adminOpen() {
+    if (!isAdmin()) return;
+    save = loadSave();
+    $('admin-user').textContent = 'Zalogowany: ' + ADMIN_USER + ' · edytujesz zapis tego konta (zmiany od razu w grze)';
+    $('a-coins').value = Math.round(save.coins); $('a-gems').value = save.gems;
+    $('a-str').value = save.up.str; $('a-spd').value = save.up.spd; $('a-bnc').value = save.up.bnc;
+    $('a-shots').value = save.shots; $('a-unlocked').value = String(save.unlocked); $('a-world').value = String(save.world);
+    $('a-str').max = $('a-spd').max = $('a-bnc').max = MAXLV;
+    $('admin-modal').classList.add('is-open');
+  }
+  function adminNum(id, lo, hi) { var v = Math.round(+$(id).value); if (!isFinite(v)) v = lo; return clamp(v, lo, hi); }
+  function adminApply() {
+    if (!isAdmin()) return;
+    save.coins = adminNum('a-coins', 0, 1e15); save.gems = adminNum('a-gems', 0, 1e12);
+    save.up.str = adminNum('a-str', 0, MAXLV); save.up.spd = adminNum('a-spd', 0, MAXLV); save.up.bnc = adminNum('a-bnc', 0, MAXLV);
+    save.shots = adminNum('a-shots', 0, 1e9);
+    save.unlocked = adminNum('a-unlocked', 0, WORLDS.length - 1);
+    save.world = Math.min(adminNum('a-world', 0, WORLDS.length - 1), save.unlocked);
+    writeSave(); refreshMenu();
+  }
+  adminSetup();
+  $('btn-admin').addEventListener('click', adminOpen);
+  $('a-close').addEventListener('click', function () { $('admin-modal').classList.remove('is-open'); refreshMenu(); });
+  $('a-save').addEventListener('click', function () { adminApply(); adminOpen(); $('admin-user').textContent = 'Zapisano ✔ · ' + ADMIN_USER; });
+  $('a-max').addEventListener('click', function () {
+    $('a-str').value = $('a-spd').value = $('a-bnc').value = MAXLV; $('a-coins').value = 1e9; $('a-gems').value = 1e4;
+    $('a-unlocked').value = String(WORLDS.length - 1);
+  });
+  $('a-items').addEventListener('click', function () {
+    if (!isAdmin()) return;
+    adminApply();
+    save.balls.owned = BALLS.map(function (b) { return b.id; });
+    save.skins.owned = SKINS.map(function (x, i) { return i; });
+    writeSave(); adminOpen();
+  });
+  $('a-wheel').addEventListener('click', function () { if (!isAdmin()) return; adminApply(); save.wheelAt = 0; writeSave(); adminOpen(); });
 
   // ---------- Debug mode (switch in the menu) ----------
   var debugOn = false, dbgT = 0, fpsAvg = 60;
