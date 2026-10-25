@@ -54,6 +54,20 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Player messages shown under a game. Anyone signed in may send one (as themselves
+    // or as "gość"), but only admins can read them, mark them read or delete them.
+    match /messages/{messageId} {
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly(['gameId', 'gameTitle', 'text', 'from', 'read', 'createdAt'])
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 2000
+        && request.resource.data.read == false
+        && (request.resource.data.from == 'gość' || isMe(request.resource.data.from.lower()));
+      allow read: if isAdmin();
+      allow update: if isAdmin() && changedFields().hasOnly(['read', 'readBy', 'readAt']);
+      allow delete: if isAdmin();
+    }
+
     match /games/{gameId} {
       allow read: if isSignedIn();
       // A game can only be created with addedBy set to the account actually making

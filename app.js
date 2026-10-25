@@ -9,6 +9,7 @@ import {
   deleteAccount,
 } from './auth.js';
 import { getGames, getGameById, addGame, deleteGame, updateGameCategory, CATEGORIES } from './games.js';
+import { sendMessage, getUnreadMessages, markMessageRead, MAX_MESSAGE_LENGTH, GUEST_NAME } from './messages.js';
 
 const CATEGORY_LABELS = {
   platformowa: 'Platformowa',
@@ -276,6 +277,150 @@ function initAddGameView() {
   };
 }
 
+// ---------- Messages (write to the admins / read them) ----------
+
+function mk(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (err) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+}
+
+function messageAsText(m) {
+  return ['Gra: ' + (m.gameTitle || '?'), 'Od: ' + (m.from === GUEST_NAME ? GUEST_NAME : '@' + m.from), '', m.text].join('\n');
+}
+
+// The "write a message" button + form shown under every game.
+function buildMessageForm(game, gameId) {
+  const box = mk('section', 'feedback');
+  const openBtn = mk('button', 'btn btn--accent');
+  openBtn.type = 'button';
+  openBtn.textContent = '✉ Napisz wiadomość';
+
+  const form = mk('form', 'feedback__form');
+  form.hidden = true;
+  const hint = mk('p', 'settings-hint', 'Napisz, co poprawić, co nie działa albo co dodać do tej gry. Wiadomość zobaczą administratorzy.');
+  const area = mk('textarea', 'feedback__text');
+  area.rows = 4;
+  area.maxLength = MAX_MESSAGE_LENGTH;
+  area.placeholder = 'Twoja wiadomość…';
+  const row = mk('div', 'feedback__row');
+  const sendBtn = mk('button', 'btn btn--accent', 'Wyślij');
+  sendBtn.type = 'submit';
+  const cancelBtn = mk('button', 'btn btn--ghost', 'Anuluj');
+  cancelBtn.type = 'button';
+  const status = mk('span', 'feedback__status');
+  row.append(sendBtn, cancelBtn, status);
+  form.append(hint, area, row);
+
+  openBtn.addEventListener('click', () => {
+    form.hidden = !form.hidden;
+    if (!form.hidden) area.focus();
+  });
+  cancelBtn.addEventListener('click', () => {
+    form.hidden = true;
+    status.textContent = '';
+  });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    sendBtn.disabled = true;
+    status.className = 'feedback__status';
+    status.textContent = 'Wysyłanie…';
+    try {
+      await sendMessage({ gameId, gameTitle: game.title, text: area.value });
+      area.value = '';
+      status.textContent = 'Wysłano ✔ Dzięki!';
+    } catch (err) {
+      status.className = 'feedback__status feedback__status--error';
+      status.textContent = 'Nie udało się wysłać: ' + err.message;
+    } finally {
+      sendBtn.disabled = false;
+    }
+  });
+
+  box.append(openBtn, form);
+  return box;
+}
+
+// Admin-only list of unread messages: copy one to paste it somewhere, or mark it read
+// so it disappears. With a gameId it lists that game's messages, otherwise all of them.
+function buildMessagesPanel(gameId) {
+  const box = mk('section', 'feedback-admin');
+  const title = mk('h2', 'feedback-admin__title', 'Wiadomości od graczy');
+  const list = mk('div', 'msg-list');
+  box.append(title, list);
+
+  function refreshTitle() {
+    const n = list.querySelectorAll('.msg').length;
+    title.textContent = 'Wiadomości od graczy' + (n ? ' (' + n + ')' : '');
+    if (!n) {
+      const empty = mk('p', 'settings-hint msg-empty', 'Brak nowych wiadomości.');
+      list.appendChild(empty);
+    }
+  }
+
+  function renderMessage(m) {
+    const card = mk('div', 'msg');
+    const when = m.createdAt ? new Date(m.createdAt).toLocaleString('pl-PL') : '';
+    const meta = mk('div', 'msg__meta',
+      (m.from === GUEST_NAME ? GUEST_NAME : '@' + m.from) + (when ? ' · ' + when : '') + (!gameId && m.gameTitle ? ' · ' + m.gameTitle : ''));
+    const text = mk('div', 'msg__text', m.text);
+    const actions = mk('div', 'msg__actions');
+    const copyBtn = mk('button', 'btn btn--ghost', 'Kopiuj');
+    copyBtn.type = 'button';
+    copyBtn.addEventListener('click', async () => {
+      const ok = await copyText(messageAsText(m));
+      copyBtn.textContent = ok ? 'Skopiowano ✔' : 'Nie udało się';
+      setTimeout(() => { copyBtn.textContent = 'Kopiuj'; }, 1500);
+    });
+    const readBtn = mk('button', 'btn btn--accent', 'Przeczytane ✓');
+    readBtn.type = 'button';
+    readBtn.addEventListener('click', async () => {
+      readBtn.disabled = true;
+      try {
+        await markMessageRead(m.id);
+        card.remove();
+        list.querySelector('.msg-empty')?.remove();
+        refreshTitle();
+      } catch (err) {
+        alert('Nie udało się oznaczyć jako przeczytane: ' + err.message);
+        readBtn.disabled = false;
+      }
+    });
+    actions.append(copyBtn, readBtn);
+    card.append(meta, text, actions);
+    return card;
+  }
+
+  getUnreadMessages(gameId)
+    .then((messages) => {
+      messages.forEach((m) => list.appendChild(renderMessage(m)));
+      refreshTitle();
+    })
+    .catch((err) => {
+      list.appendChild(mk('p', 'feedback__status feedback__status--error', 'Nie udało się wczytać wiadomości: ' + err.message));
+    });
+  return box;
+}
+
 // ---------- Play ----------
 
 async function initPlayView(gameId) {
@@ -392,6 +537,8 @@ async function initPlayView(gameId) {
   page.append(titleEl, metaEl);
   if (categoryEditEl) page.append(categoryEditEl);
   page.append(frameWrap, actions);
+  page.append(buildMessageForm(game, gameId));
+  if (await isCurrentUserAdmin()) page.append(buildMessagesPanel(gameId));
 }
 
 // ---------- Admin ----------
@@ -479,8 +626,11 @@ async function initAdminView() {
   const admin = await isCurrentUserAdmin();
   deniedEl.hidden = admin;
   sectionEl.hidden = !admin;
+  const viewEl = document.getElementById('view-admin');
+  viewEl.querySelectorAll('.feedback-admin').forEach((node) => node.remove());
   if (admin) {
     const accounts = await getAllAccounts();
     renderAccounts(accounts);
+    viewEl.append(buildMessagesPanel(null));
   }
 }

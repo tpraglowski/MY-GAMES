@@ -638,3 +638,78 @@ main {
   color: var(--accent-text);
   border-color: var(--accent);
 }
+
+/* ---------- Messages under a game / in the admin panel ---------- */
+.feedback,
+.feedback-admin {
+  margin-top: 1.5rem;
+}
+
+.feedback__form {
+  margin-top: 0.75rem;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.feedback__text {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}
+
+.feedback__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+
+.feedback__status {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}
+
+.feedback__status--error {
+  color: #e74c3c;
+}
+
+.feedback-admin__title {
+  font-size: 1.1rem;
+  margin: 0 0 0.6rem;
+}
+
+.msg {
+  padding: 0.8rem 1rem;
+  margin-bottom: 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+}
+
+.msg__meta {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-bottom: 0.35rem;
+}
+
+.msg__text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.msg__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
