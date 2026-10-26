@@ -86,15 +86,15 @@ export async function getLeaderboard(gameId) {
     getDocs(query(collection(db, 'scores'), where('gameId', '==', gameId))),
     getAllAccounts(),
   ]);
-  const verified = new Map();
-  accounts.forEach((a) => { if (a.verified === true) verified.set(a.id, a); });
+  const scores = new Map();
+  scoreSnap.docs.forEach((d) => scores.set(d.data().account, d.data()));
+  // Every verified account is listed; one that hasn't reported any stats yet shows zeros.
   const rows = [];
-  scoreSnap.docs.forEach((d) => {
-    const s = d.data();
-    const acc = verified.get(s.account);
-    if (!acc) return;
+  accounts.forEach((acc) => {
+    if (acc.verified !== true) return;
+    const s = scores.get(acc.id) || {};
     rows.push({
-      name: acc.displayName || acc.username || s.account,
+      name: acc.displayName || acc.username || acc.id,
       coins: s.coins || 0,
       gems: s.gems || 0,
       playTime: s.playTime || 0,

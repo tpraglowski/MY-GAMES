@@ -486,7 +486,7 @@ function bindGameBridge(iframe, gameId) {
     const stats = pending;
     pending = null;
     lastSent = Date.now();
-    submitScore(gameId, stats).catch(() => {});
+    submitScore(gameId, stats).catch((err) => console.warn('Nie udało się zapisać wyniku:', err.message));
   }
 
   gameBridgeHandler = (e) => {
