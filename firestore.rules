@@ -49,8 +49,10 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.get('admin', false) != true;
       // Update: either it's your own account or you're an admin — and only an admin
       // may change the `admin` field itself.
+      // Only admins may change `admin`, `verified` (in the score table) and `displayName`
+      // (the nick shown there).
       allow update: if isSignedIn() && (isMe(accountId) || isAdmin())
-        && (isAdmin() || !changedFields().hasAny(['admin']));
+        && (isAdmin() || !changedFields().hasAny(['admin', 'verified', 'displayName']));
       allow delete: if isAdmin();
     }
 
@@ -65,6 +67,20 @@ service cloud.firestore {
         && (request.resource.data.from == 'gość' || isMe(request.resource.data.from.lower()));
       allow read: if isAdmin();
       allow update: if isAdmin() && changedFields().hasOnly(['read', 'readBy', 'readAt']);
+      allow delete: if isAdmin();
+    }
+
+    // Score table data. The game reports a logged-in player's stats (document id is
+    // <gameId>_<account>), and only that player can write their own entry. Whether it is
+    // shown, and under which nick, is decided by the admin via the account's
+    // `verified` / `displayName` fields.
+    match /scores/{scoreId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn()
+        && isMe(request.resource.data.account)
+        && request.resource.data.keys().hasOnly(['gameId', 'account', 'coins', 'gems', 'playTime', 'updatedAt'])
+        && request.resource.data.coins is number && request.resource.data.gems is number && request.resource.data.playTime is number
+        && scoreId == request.resource.data.gameId + '_' + request.resource.data.account;
       allow delete: if isAdmin();
     }
 

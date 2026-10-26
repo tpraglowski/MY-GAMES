@@ -8,8 +8,9 @@ import {
   setAccountAdmin,
   deleteAccount,
   changePassword,
+  setAccountLeaderboard,
 } from './auth.js';
-import { getGames, getGameById, addGame, deleteGame, updateGameCategory, CATEGORIES } from './games.js';
+import { getGames, getGameById, addGame, deleteGame, updateGameCategory, submitScore, getLeaderboard, CATEGORIES } from './games.js';
 import { sendMessage, getUnreadMessages, markMessageRead, MAX_MESSAGE_LENGTH, GUEST_NAME } from './messages.js';
 
 const CATEGORY_LABELS = {
@@ -465,6 +466,46 @@ function buildMessagesPanel(gameId) {
   return box;
 }
 
+// ---------- Game <-> site bridge (leaderboard) ----------
+
+// A native game runs in an iframe and talks to the site with postMessage:
+//   game -> site  { type: 'mg-stats', coins, gems, playTime }   (logged-in players only)
+//   game -> site  { type: 'mg-leaderboard-request' }
+//   site -> game  { type: 'mg-leaderboard', rows: [{ name, coins, gems, playTime }] }
+let gameBridgeHandler = null;
+
+function bindGameBridge(iframe, gameId) {
+  if (gameBridgeHandler) window.removeEventListener('message', gameBridgeHandler);
+  let lastSent = 0;
+  let timer = null;
+  let pending = null;
+
+  function flush() {
+    timer = null;
+    if (!pending) return;
+    const stats = pending;
+    pending = null;
+    lastSent = Date.now();
+    submitScore(gameId, stats).catch(() => {});
+  }
+
+  gameBridgeHandler = (e) => {
+    if (e.origin !== location.origin || e.source !== iframe.contentWindow || !e.data) return;
+    if (e.data.type === 'mg-stats') {
+      if (!getCurrentUser()) return;
+      pending = e.data;
+      const wait = 8000 - (Date.now() - lastSent);
+      if (wait <= 0) flush();
+      else if (!timer) timer = setTimeout(flush, wait);
+    } else if (e.data.type === 'mg-leaderboard-request') {
+      getLeaderboard(gameId)
+        .then((rows) => iframe.contentWindow.postMessage({ type: 'mg-leaderboard', rows }, location.origin))
+        .catch((err) => iframe.contentWindow.postMessage({ type: 'mg-leaderboard', rows: [], error: err.message }, location.origin));
+    }
+  };
+  window.addEventListener('message', gameBridgeHandler);
+}
+
 // ---------- Play ----------
 
 async function initPlayView(gameId) {
@@ -503,6 +544,7 @@ async function initPlayView(gameId) {
   iframe.src = isNative ? game.path : 'https://scratch.mit.edu/projects/' + encodeURIComponent(game.scratchProjectId) + '/embed';
   iframe.allowFullscreen = true;
   frameWrap.appendChild(iframe);
+  if (isNative) bindGameBridge(iframe, gameId);
 
   const actions = document.createElement('div');
   actions.className = 'play-actions';
@@ -622,6 +664,52 @@ async function initAdminView() {
         badge.textContent = isHardcodedAdmin ? 'Administrator (główny)' : isAdminAcc ? 'Administrator' : 'Użytkownik';
 
         row.append(name, badge);
+
+        // Leaderboard identity: a verified account shows up in the game's score table
+        // under this nick (the login name itself never changes).
+        const nickInput = document.createElement('input');
+        nickInput.type = 'text';
+        nickInput.className = 'account-row__nick';
+        nickInput.maxLength = 24;
+        nickInput.placeholder = 'Nick w tabeli';
+        nickInput.value = acc.displayName || '';
+        nickInput.title = 'Nick pokazywany w tabeli wyników (login zostaje bez zmian)';
+
+        const nickBtn = document.createElement('button');
+        nickBtn.type = 'button';
+        nickBtn.className = 'btn btn--ghost';
+        nickBtn.textContent = 'Zapisz nick';
+        nickBtn.addEventListener('click', async () => {
+          nickBtn.disabled = true;
+          try {
+            await setAccountLeaderboard(acc.id, { displayName: nickInput.value });
+            acc.displayName = nickInput.value.trim();
+            nickBtn.textContent = 'Zapisano ✔';
+            setTimeout(() => { nickBtn.textContent = 'Zapisz nick'; }, 1200);
+          } catch (err) {
+            alert('Nie udało się zapisać nicku: ' + err.message);
+          } finally {
+            nickBtn.disabled = false;
+          }
+        });
+
+        const verifyBtn = document.createElement('button');
+        verifyBtn.type = 'button';
+        verifyBtn.className = acc.verified ? 'btn btn--accent' : 'btn btn--ghost';
+        verifyBtn.textContent = acc.verified ? '✓ Zweryfikowany (cofnij)' : 'Zweryfikuj';
+        verifyBtn.addEventListener('click', async () => {
+          verifyBtn.disabled = true;
+          try {
+            await setAccountLeaderboard(acc.id, { verified: !acc.verified, displayName: nickInput.value });
+            acc.verified = !acc.verified;
+            acc.displayName = nickInput.value.trim();
+            renderAccounts(accounts);
+          } catch (err) {
+            alert('Nie udało się zmienić weryfikacji: ' + err.message);
+            verifyBtn.disabled = false;
+          }
+        });
+        row.append(nickInput, nickBtn, verifyBtn);
 
         if (!isHardcodedAdmin) {
           const toggleBtn = document.createElement('button');

@@ -36,6 +36,15 @@
   .agrid input, .agrid select { padding: 0.4rem 0.5rem; border-radius: 8px; border: 2px solid #2d5878; background: #0a1f2e; color: #fff; font: 700 0.95rem inherit; min-width: 0; }
   .abtns { display: flex; flex-wrap: wrap; gap: 0.5rem; }
   .abtns .btn { flex: 1 1 auto; }
+  .lb-tabs { display: flex; gap: 0.4rem; margin-bottom: 0.7rem; }
+  .lb-tabs .btn { flex: 1; padding: 0.4rem 0.3rem; font-size: 0.8rem; opacity: 0.6; }
+  .lb-tabs .btn.is-active { opacity: 1; }
+  .lb-list { margin-bottom: 0.8rem; max-height: 48vh; overflow: auto; }
+  .lb-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.2rem; border-bottom: 1px solid #2d5878; font-weight: 700; font-size: 0.92rem; }
+  .lb-row .rank { width: 1.8rem; color: #ffd166; text-align: right; }
+  .lb-row .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lb-row .val { color: #b8ffcf; white-space: nowrap; }
+  .lb-empty { color: #9fb4c8; font-size: 0.85rem; padding: 0.6rem 0; }
   #menu-ver { color: #0b5a3b; opacity: 0.7; font-size: 0.78rem; font-weight: 700; }
   .dbg-toggle { display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-weight: 800; font-size: 0.9rem; color: #06402a; user-select: none; }
   .dbg-toggle input { position: absolute; opacity: 0; pointer-events: none; }
@@ -166,6 +175,7 @@ window.addEventListener('error', function (e) {
   <div id="menu-stats"></div>
   <button class="btn" id="btn-play" type="button">▶ Graj</button>
   <button class="btn btn--ghost" id="btn-reset" type="button">Zresetuj postęp</button>
+  <button class="btn btn--ghost" id="btn-lb" type="button">🏆 Tabela wyników</button>
   <button class="btn btn--ghost" id="btn-admin" type="button" style="display:none">🛠 Panel administratora</button>
   <label class="dbg-toggle"><input type="checkbox" id="dbg-check"><span class="sw"></span><span>Tryb debug</span></label>
   <div id="menu-ver"></div>
@@ -192,6 +202,20 @@ window.addEventListener('error', function (e) {
       <button class="btn" id="a-wheel" type="button">Reset koła</button>
       <button class="btn btn--ghost" id="a-close" type="button" style="color:#cfe3f5;border-color:#2d5878">Zamknij</button>
     </div>
+  </div>
+</div>
+
+<div id="lb-modal" class="amodal">
+  <div class="abox">
+    <h2>🏆 Tabela wyników</h2>
+    <p class="ahint">Widać graczy zweryfikowanych przez administratora, pod nickiem ustawionym przez niego.</p>
+    <div class="lb-tabs" id="lb-tabs">
+      <button class="btn is-active" type="button" data-sort="playTime">Czas gry</button>
+      <button class="btn" type="button" data-sort="coins">Kasa 🪙</button>
+      <button class="btn" type="button" data-sort="gems">Gemy 💎</button>
+    </div>
+    <div class="lb-list" id="lb-list"></div>
+    <div class="abtns"><button class="btn btn--ghost" id="lb-close" type="button" style="color:#cfe3f5;border-color:#2d5878">Zamknij</button></div>
   </div>
 </div>
 
@@ -251,7 +275,7 @@ window.addEventListener('error', function (e) {
 <script>
 (function () {
   var DT = 1 / 120, MAXLV = 40, CHUNK = 60, BALL_R = 0.3;
-  var VERSION = '2.6', BUILD = '2026-10-21';
+  var VERSION = '2.7', BUILD = '2026-10-26';
   var GREEN_R = 24; // lighter putting green around each hole (flat; finish with a chip)
   var CURV_R = 900; // virtual planet radius (m) for the horizon curvature at altitude
 
@@ -618,7 +642,7 @@ window.addEventListener('error', function (e) {
   function freshSave() {
     return { v: 1, coins: 0, gems: 0, up: { str: 0, spd: 0, bnc: 0 },
       balls: { owned: ['std'], sel: 'std' }, skins: { owned: [0], sel: 0 },
-      unlocked: 0, world: 0, best: WORLDS.map(function () { return 0; }), orbits: WORLDS.map(function () { return false; }), shots: 0, wheelAt: 0 };
+      unlocked: 0, world: 0, best: WORLDS.map(function () { return 0; }), orbits: WORLDS.map(function () { return false; }), shots: 0, wheelAt: 0, playTime: 0 };
   }
   function saveKey() {
     var user = '';
@@ -633,6 +657,7 @@ window.addEventListener('error', function (e) {
       if (s && s.v === 1) {
         f.coins = Math.max(0, +s.coins || 0);
         f.gems = Math.max(0, +s.gems || 0);
+        f.playTime = Math.max(0, +s.playTime || 0);
         ['str', 'spd', 'bnc'].forEach(function (k) { f.up[k] = clamp((s.up && +s.up[k]) || 0, 0, MAXLV) | 0; });
         if (s.balls && s.balls.owned) {
           f.balls.owned = s.balls.owned.filter(function (id) { return BALLS.some(function (b) { return b.id === id; }); });
@@ -876,7 +901,7 @@ window.addEventListener('error', function (e) {
     var lines = [], title;
     if (res === 'hole') {
       var bonus = Math.round(HOLE_BONUS[ball.holeIdx] * W.earn * 0.6);
-      save.coins += bonus; writeSave(); updateHud();
+      save.coins += bonus; writeSave(); sendStats(); updateHud();
       title = 'Dobitka! ⛳';
       lines.push('Piłka wpadła do dołka <b>' + HOLE_NAMES[ball.holeIdx] + '</b>: <b>+' + fmt(bonus) + ' 🪙</b>');
       offerPutt(false);
@@ -941,6 +966,7 @@ window.addEventListener('error', function (e) {
     save.coins += coins;
     save.shots += 1;
     writeSave();
+    sendStats();
     updateHud();
     $('r-title').textContent = title;
     var onGreen = res === 'stop' && greenIdx(ball.x) >= 0;
@@ -1844,7 +1870,7 @@ window.addEventListener('error', function (e) {
     if (save.shots > 0 && !confirm('Zacząć od nowa? Stracisz cały zapisany postęp.')) return;
     save = freshSave(); writeSave(); refreshMenu();
   });
-  $('btn-gear').addEventListener('click', function () { refreshMenu(); showScreen('menu'); });
+  $('btn-gear').addEventListener('click', function () { writeSave(); sendStats(); refreshMenu(); showScreen('menu'); });
   $('b-club').addEventListener('click', function () { openShop('skin'); });
   $('b-star').addEventListener('click', function () { openShop('world'); });
   $('shop-close').addEventListener('click', function () { $('shop').classList.remove('is-open'); updateHud(); });
@@ -1856,14 +1882,18 @@ window.addEventListener('error', function (e) {
   window.addEventListener('resize', resize);
   setInterval(function () { if ($('screen-game').classList.contains('is-active')) updateGift(); }, 1000);
 
-  var lastTs = null;
+  var lastTs = null, playSync = 0;
   function frame(ts) {
     requestAnimationFrame(frame);
     if (!$('screen-game').classList.contains('is-active')) { lastTs = null; return; }
     if (stage.clientWidth !== VW || stage.clientHeight !== VH) resize();
     if (lastTs === null) lastTs = ts;
-    var dt = Math.min((ts - lastTs) / 1000, 0.05);
+    var rawDt = Math.min((ts - lastTs) / 1000, 1);
+    var dt = Math.min(rawDt, 0.05);
     lastTs = ts;
+    save.playTime += rawDt;
+    playSync += rawDt;
+    if (playSync >= 20) { playSync = 0; writeSave(); sendStats(); }
     update(dt);
     draw();
     if (debugOn) updateDbg(dt);
@@ -1917,6 +1947,56 @@ window.addEventListener('error', function (e) {
     writeSave(); adminOpen();
   });
   $('a-wheel').addEventListener('click', function () { if (!isAdmin()) return; adminApply(); save.wheelAt = 0; writeSave(); adminOpen(); });
+
+  // ---------- Score table (the site owns the Firebase connection; we talk to it) ----------
+  var inFrame = false;
+  try { inFrame = window.parent !== window; } catch (eF) { inFrame = false; }
+  function sendStats() { // logged-in players only: coins, gems and play time go to the site
+    if (!inFrame || !currentUser()) return;
+    try { window.parent.postMessage({ type: 'mg-stats', coins: Math.floor(save.coins), gems: save.gems, playTime: Math.floor(save.playTime) }, location.origin); } catch (eP) { /* ignore */ }
+  }
+  var lbRows = null, lbSort = 'playTime', lbNote = '';
+  function fmtTime(sec) {
+    sec = Math.floor(sec);
+    var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+    return h > 0 ? h + ' h ' + m + ' min' : (m > 0 ? m + ' min' : sec + ' s');
+  }
+  function renderLb() {
+    var list = $('lb-list');
+    list.innerHTML = '';
+    [].slice.call($('lb-tabs').children).forEach(function (b) { b.classList.toggle('is-active', b.getAttribute('data-sort') === lbSort); });
+    if (!inFrame) { list.appendChild(el('div', 'lb-empty', 'Tabela jest dostępna, gdy grasz na stronie z grami.')); return; }
+    if (lbRows === null) { list.appendChild(el('div', 'lb-empty', 'Ładowanie…')); return; }
+    if (lbNote) { list.appendChild(el('div', 'lb-empty', lbNote)); return; }
+    var rows = lbRows.slice().sort(function (a, b) { return (b[lbSort] || 0) - (a[lbSort] || 0); });
+    if (!rows.length) { list.appendChild(el('div', 'lb-empty', 'Nikt nie jest jeszcze zweryfikowany. Poproś administratora o weryfikację.')); return; }
+    rows.forEach(function (r, i) {
+      var row = el('div', 'lb-row');
+      var val = lbSort === 'playTime' ? fmtTime(r.playTime) : (lbSort === 'coins' ? '🪙 ' + fmt(r.coins) : '💎 ' + fmt(r.gems));
+      row.appendChild(el('span', 'rank', String(i + 1)));
+      row.appendChild(el('span', 'nm', r.name));
+      row.appendChild(el('span', 'val', val));
+      list.appendChild(row);
+    });
+  }
+  function openLb() {
+    lbRows = null; lbNote = '';
+    $('lb-modal').classList.add('is-open');
+    renderLb();
+    if (inFrame) { try { window.parent.postMessage({ type: 'mg-leaderboard-request' }, location.origin); } catch (eL) { /* ignore */ } }
+  }
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (e.origin !== location.origin || e.source !== window.parent || !d || d.type !== 'mg-leaderboard') return;
+    lbRows = d.rows || [];
+    lbNote = d.error ? 'Nie udało się wczytać tabeli.' : '';
+    renderLb();
+  });
+  $('btn-lb').addEventListener('click', openLb);
+  $('lb-close').addEventListener('click', function () { $('lb-modal').classList.remove('is-open'); });
+  [].slice.call($('lb-tabs').children).forEach(function (b) {
+    b.addEventListener('click', function () { lbSort = b.getAttribute('data-sort'); renderLb(); });
+  });
 
   // ---------- Debug mode (switch in the menu) ----------
   var debugOn = false, dbgT = 0, fpsAvg = 60;

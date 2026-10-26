@@ -713,3 +713,14 @@ main {
   gap: 0.5rem;
   margin-top: 0.6rem;
 }
+
+.account-row__nick {
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  width: 9rem;
+  max-width: 100%;
+}

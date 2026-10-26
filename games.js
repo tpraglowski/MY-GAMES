@@ -1,5 +1,5 @@
-import { db, authReady, getCurrentUser } from './auth.js';
-import { collection, doc, addDoc, deleteDoc, updateDoc, getDoc, getDocs, query, orderBy } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
+import { db, authReady, getCurrentUser, getAllAccounts } from './auth.js';
+import { collection, doc, addDoc, deleteDoc, updateDoc, setDoc, getDoc, getDocs, query, orderBy, where } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 
 const gamesCollection = collection(db, 'games');
 
@@ -55,6 +55,53 @@ export async function deleteGame(id) {
 }
 
 export { CATEGORIES };
+
+// ---------- Leaderboard (per game) ----------
+
+function wholeNumber(v) {
+  const n = Math.floor(Number(v));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+// The game reports the logged-in player's stats; one document per game + account.
+export async function submitScore(gameId, stats) {
+  const user = getCurrentUser();
+  if (!user || !gameId) return;
+  await authReady;
+  const account = user.trim().toLowerCase();
+  await setDoc(doc(db, 'scores', gameId + '_' + account), {
+    gameId,
+    account,
+    coins: wholeNumber(stats.coins),
+    gems: wholeNumber(stats.gems),
+    playTime: wholeNumber(stats.playTime),
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+// Only accounts an admin has verified appear, under the nick the admin set for them.
+export async function getLeaderboard(gameId) {
+  await authReady;
+  const [scoreSnap, accounts] = await Promise.all([
+    getDocs(query(collection(db, 'scores'), where('gameId', '==', gameId))),
+    getAllAccounts(),
+  ]);
+  const verified = new Map();
+  accounts.forEach((a) => { if (a.verified === true) verified.set(a.id, a); });
+  const rows = [];
+  scoreSnap.docs.forEach((d) => {
+    const s = d.data();
+    const acc = verified.get(s.account);
+    if (!acc) return;
+    rows.push({
+      name: acc.displayName || acc.username || s.account,
+      coins: s.coins || 0,
+      gems: s.gems || 0,
+      playTime: s.playTime || 0,
+    });
+  });
+  return rows;
+}
 
 export async function updateGameCategory(id, category) {
   if (!CATEGORIES.includes(category)) {

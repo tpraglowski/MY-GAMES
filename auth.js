@@ -82,6 +82,17 @@ export async function setAccountAdmin(accountId, isAdmin) {
   await updateDoc(doc(db, 'accounts', accountId), { admin: isAdmin });
 }
 
+// Leaderboard identity, set by an admin only (firestore.rules stops owners changing
+// these fields themselves): `verified` puts the account in the game's score table
+// and `displayName` is the nick shown there — the login name never changes.
+export async function setAccountLeaderboard(accountId, fields) {
+  await authReady;
+  const update = {};
+  if (typeof fields.verified === 'boolean') update.verified = fields.verified;
+  if (typeof fields.displayName === 'string') update.displayName = fields.displayName.trim().slice(0, 24);
+  await updateDoc(doc(db, 'accounts', accountId), update);
+}
+
 export async function deleteAccount(accountId) {
   await authReady;
   await deleteDoc(doc(db, 'accounts', accountId));
