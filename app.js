@@ -7,6 +7,7 @@ import {
   getAllAccounts,
   setAccountAdmin,
   deleteAccount,
+  changePassword,
 } from './auth.js';
 import { getGames, getGameById, addGame, deleteGame, updateGameCategory, CATEGORIES } from './games.js';
 import { sendMessage, getUnreadMessages, markMessageRead, MAX_MESSAGE_LENGTH, GUEST_NAME } from './messages.js';
@@ -68,6 +69,7 @@ async function route() {
   showView(name);
   if (name === 'games') await initGamesView();
   else if (name === 'login') initLoginView();
+  else if (name === 'settings') initSettingsView();
   else if (name === 'add-game') initAddGameView();
   else if (name === 'play') await initPlayView(param);
   else if (name === 'admin') await initAdminView();
@@ -78,6 +80,48 @@ document.addEventListener('DOMContentLoaded', route);
 // Lets auth.js re-run the current view's init (e.g. after logout, so an
 // admin-only or login-required view immediately reflects the new state).
 window.rerunRoute = route;
+
+// ---------- Settings (change password) ----------
+
+function initSettingsView() {
+  const form = document.getElementById('password-form');
+  const loginHint = document.getElementById('password-login-hint');
+  const msgEl = document.getElementById('password-msg');
+  if (!form) return;
+  const loggedIn = !!getCurrentUser();
+  form.hidden = !loggedIn;
+  loginHint.hidden = loggedIn;
+  msgEl.hidden = true;
+  if (form.dataset.bound) return;
+  form.dataset.bound = '1';
+
+  function show(text, ok) {
+    msgEl.textContent = text;
+    msgEl.hidden = false;
+    msgEl.style.color = ok ? '#27ae60' : '';
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const oldPw = form.elements.old.value;
+    const newPw = form.elements.new.value;
+    if (newPw !== form.elements.repeat.value) {
+      show('Nowe hasła nie są takie same.', false);
+      return;
+    }
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    try {
+      await changePassword(oldPw, newPw);
+      form.reset();
+      show('Hasło zostało zmienione ✔', true);
+    } catch (err) {
+      show(err.message, false);
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+}
 
 // ---------- Games list ----------
 

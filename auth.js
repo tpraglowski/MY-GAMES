@@ -125,6 +125,24 @@ export async function loginUser(username, password) {
   setSession(data.username);
 }
 
+// Changes the password of the logged-in account. The current password is verified
+// first (same PBKDF2 check as login), then a fresh salt + hash are stored.
+export async function changePassword(oldPassword, newPassword) {
+  const current = getCurrentUser();
+  if (!current) throw new Error('Musisz być zalogowany.');
+  if (!oldPassword || !newPassword) throw new Error('Uzupełnij wszystkie pola.');
+  if (newPassword.length < 4) throw new Error('Nowe hasło musi mieć co najmniej 4 znaki.');
+  await authReady;
+  const ref = accountDocRef(current);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error('Nie znaleziono konta.');
+  const data = snap.data();
+  const ok = await verifyPassword(oldPassword, data.passwordHash, data.passwordSalt);
+  if (!ok) throw new Error('Obecne hasło jest błędne.');
+  const { hash, salt } = await hashPassword(newPassword);
+  await updateDoc(ref, { passwordHash: hash, passwordSalt: salt });
+}
+
 export function renderAccountWidget() {
   const widget = document.getElementById('account-widget');
   if (!widget) return;

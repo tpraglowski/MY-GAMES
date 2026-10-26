@@ -133,6 +133,25 @@
           <button type="button" class="theme-option" data-theme-mode="auto"><svg class="icon" viewBox="0 0 20 20"><rect x="2.5" y="3.5" width="15" height="10" rx="1.2"/><line x1="7" y1="17" x2="13" y2="17"/><line x1="10" y1="13.5" x2="10" y2="17"/></svg> Auto</button>
         </div>
       </section>
+
+      <section class="settings-section" id="password-section">
+        <h2>Konto</h2>
+        <p class="settings-hint" id="password-login-hint" hidden>Zaloguj się, żeby zmienić hasło.</p>
+        <form id="password-form" class="auth-form password-form" hidden>
+          <p class="settings-hint">Zmień hasło do swojego konta.</p>
+          <label>Obecne hasło
+            <input type="password" name="old" autocomplete="current-password" required>
+          </label>
+          <label>Nowe hasło
+            <input type="password" name="new" autocomplete="new-password" minlength="4" required>
+          </label>
+          <label>Powtórz nowe hasło
+            <input type="password" name="repeat" autocomplete="new-password" minlength="4" required>
+          </label>
+          <button type="submit" class="btn btn--accent">Zmień hasło</button>
+          <p class="auth-error" id="password-msg" hidden></p>
+        </form>
+      </section>
     </section>
 
     <!-- ---------- Add game ---------- -->
