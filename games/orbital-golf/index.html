@@ -42,7 +42,7 @@
   .lb-list { margin-bottom: 0.8rem; max-height: 48vh; overflow: auto; }
   .lb-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.2rem; border-bottom: 1px solid #2d5878; font-weight: 700; font-size: 0.92rem; }
   .lb-row .rank { width: 1.8rem; color: #ffd166; text-align: right; }
-  .lb-row .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lb-row .nm { flex: 1; min-width: 0; overflow-wrap: anywhere; line-height: 1.25; }
   .lb-row .val { color: #b8ffcf; white-space: nowrap; }
   .lb-empty { color: #9fb4c8; font-size: 0.85rem; padding: 0.6rem 0; }
   #menu-ver { color: #0b5a3b; opacity: 0.7; font-size: 0.78rem; font-weight: 700; }
@@ -275,7 +275,7 @@ window.addEventListener('error', function (e) {
 <script>
 (function () {
   var DT = 1 / 120, MAXLV = 40, CHUNK = 60, BALL_R = 0.3;
-  var VERSION = '2.7', BUILD = '2026-10-26';
+  var VERSION = '2.8', BUILD = '2026-10-26';
   var GREEN_R = 24; // lighter putting green around each hole (flat; finish with a chip)
   var CURV_R = 900; // virtual planet radius (m) for the horizon curvature at altitude
 

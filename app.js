@@ -670,7 +670,7 @@ async function initAdminView() {
         const nickInput = document.createElement('input');
         nickInput.type = 'text';
         nickInput.className = 'account-row__nick';
-        nickInput.maxLength = 24;
+        nickInput.maxLength = 50;
         nickInput.placeholder = 'Nick w tabeli';
         nickInput.value = acc.displayName || '';
         nickInput.title = 'Nick pokazywany w tabeli wyników (login zostaje bez zmian)';

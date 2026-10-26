@@ -89,7 +89,7 @@ export async function setAccountLeaderboard(accountId, fields) {
   await authReady;
   const update = {};
   if (typeof fields.verified === 'boolean') update.verified = fields.verified;
-  if (typeof fields.displayName === 'string') update.displayName = fields.displayName.trim().slice(0, 24);
+  if (typeof fields.displayName === 'string') update.displayName = fields.displayName.trim().slice(0, 50);
   await updateDoc(doc(db, 'accounts', accountId), update);
 }
 

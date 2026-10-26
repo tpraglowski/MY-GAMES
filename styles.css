@@ -721,6 +721,6 @@ main {
   background: var(--bg);
   color: var(--text);
   font: inherit;
-  width: 9rem;
+  width: 14rem;
   max-width: 100%;
 }
