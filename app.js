@@ -479,14 +479,16 @@ function bindGameBridge(iframe, gameId) {
   let lastSent = 0;
   let timer = null;
   let pending = null;
+  let lastWrite = Promise.resolve();
 
   function flush() {
     timer = null;
-    if (!pending) return;
+    if (!pending) return lastWrite;
     const stats = pending;
     pending = null;
     lastSent = Date.now();
-    submitScore(gameId, stats).catch((err) => console.warn('Nie udało się zapisać wyniku:', err.message));
+    lastWrite = submitScore(gameId, stats).catch((err) => console.warn('Nie udało się zapisać wyniku:', err.message));
+    return lastWrite;
   }
 
   gameBridgeHandler = (e) => {
@@ -498,7 +500,10 @@ function bindGameBridge(iframe, gameId) {
       if (wait <= 0) flush();
       else if (!timer) timer = setTimeout(flush, wait);
     } else if (e.data.type === 'mg-leaderboard-request') {
-      getLeaderboard(gameId)
+      // Save the viewer's own latest stats first, so the table already includes them.
+      if (timer) clearTimeout(timer);
+      flush()
+        .then(() => getLeaderboard(gameId))
         .then((rows) => iframe.contentWindow.postMessage({ type: 'mg-leaderboard', rows }, location.origin))
         .catch((err) => iframe.contentWindow.postMessage({ type: 'mg-leaderboard', rows: [], error: err.message }, location.origin));
     }
