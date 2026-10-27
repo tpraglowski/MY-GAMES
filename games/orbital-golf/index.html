@@ -213,6 +213,7 @@ window.addEventListener('error', function (e) {
       <button class="btn is-active" type="button" data-sort="playTime">Czas gry</button>
       <button class="btn" type="button" data-sort="coins">Kasa 🪙</button>
       <button class="btn" type="button" data-sort="gems">Gemy 💎</button>
+      <button class="btn" type="button" data-sort="record">Rekord 🚀</button>
     </div>
     <div class="lb-list" id="lb-list"></div>
     <div class="abtns"><button class="btn btn--ghost" id="lb-close" type="button" style="color:#cfe3f5;border-color:#2d5878">Zamknij</button></div>
@@ -275,7 +276,7 @@ window.addEventListener('error', function (e) {
 <script>
 (function () {
   var DT = 1 / 120, MAXLV = 40, CHUNK = 60, BALL_R = 0.3;
-  var VERSION = '2.9', BUILD = '2026-10-27';
+  var VERSION = '3.0', BUILD = '2026-10-27';
   var GREEN_R = 24; // lighter putting green around each hole (flat; finish with a chip)
   var CURV_R = 900; // virtual planet radius (m) for the horizon curvature at altitude
 
@@ -1953,13 +1954,22 @@ window.addEventListener('error', function (e) {
   try { inFrame = window.parent !== window; } catch (eF) { inFrame = false; }
   function sendStats() { // logged-in players only: coins, gems and play time go to the site
     if (!inFrame || !currentUser()) return;
-    try { window.parent.postMessage({ type: 'mg-stats', coins: Math.floor(save.coins), gems: save.gems, playTime: Math.floor(save.playTime) }, location.origin); } catch (eP) { /* ignore */ }
+    var rec = 0, recW = 0;
+    for (var wi = 0; wi < save.best.length && wi < WORLDS.length; wi++) if (save.best[wi] > rec) { rec = save.best[wi]; recW = wi; }
+    try {
+      window.parent.postMessage({ type: 'mg-stats', coins: Math.floor(save.coins), gems: save.gems, playTime: Math.floor(save.playTime),
+        record: Math.floor(rec), recordWorld: rec > 0 ? WORLDS[recW].id : '' }, location.origin);
+    } catch (eP) { /* ignore */ }
   }
   var lbRows = null, lbSort = 'playTime', lbNote = '';
   function fmtTime(sec) {
     sec = Math.floor(sec);
     var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
     return h > 0 ? h + ' h ' + m + ' min' : (m > 0 ? m + ' min' : sec + ' s');
+  }
+  function worldNameById(id) {
+    for (var wn = 0; wn < WORLDS.length; wn++) if (WORLDS[wn].id === id) return WORLDS[wn].name;
+    return '?';
   }
   function renderLb() {
     var list = $('lb-list');
@@ -1972,7 +1982,11 @@ window.addEventListener('error', function (e) {
     if (!rows.length) { list.appendChild(el('div', 'lb-empty', 'Nikt nie jest jeszcze zweryfikowany. Poproś administratora o weryfikację.')); return; }
     rows.forEach(function (r, i) {
       var row = el('div', 'lb-row');
-      var val = lbSort === 'playTime' ? fmtTime(r.playTime) : (lbSort === 'coins' ? '🪙 ' + fmt(r.coins) : '💎 ' + fmt(r.gems));
+      var val;
+      if (lbSort === 'playTime') val = fmtTime(r.playTime);
+      else if (lbSort === 'coins') val = '🪙 ' + fmt(r.coins);
+      else if (lbSort === 'gems') val = '💎 ' + fmt(r.gems);
+      else val = r.record > 0 ? fmt(r.record) + ' m · ' + worldNameById(r.recordWorld) : '—';
       row.appendChild(el('span', 'rank', String(i + 1)));
       row.appendChild(el('span', 'nm', r.name));
       row.appendChild(el('span', 'val', val));

@@ -69,14 +69,27 @@ export async function submitScore(gameId, stats) {
   if (!user || !gameId) return;
   await authReady;
   const account = user.trim().toLowerCase();
-  await setDoc(doc(db, 'scores', gameId + '_' + account), {
+  const ref = doc(db, 'scores', gameId + '_' + account);
+  const basic = {
     gameId,
     account,
     coins: wholeNumber(stats.coins),
     gems: wholeNumber(stats.gems),
     playTime: wholeNumber(stats.playTime),
     updatedAt: new Date().toISOString(),
+  };
+  // The distance record (and the world it was set in) needs the newer security rules;
+  // if they aren't published yet, fall back to the basic stats instead of failing.
+  const full = Object.assign({}, basic, {
+    record: wholeNumber(stats.record),
+    recordWorld: String(stats.recordWorld || '').slice(0, 20),
   });
+  try {
+    await setDoc(ref, full);
+  } catch (err) {
+    if (err && err.code === 'permission-denied') await setDoc(ref, basic);
+    else throw err;
+  }
 }
 
 // Only accounts an admin has verified appear, under the nick the admin set for them.
@@ -98,6 +111,8 @@ export async function getLeaderboard(gameId) {
       coins: s.coins || 0,
       gems: s.gems || 0,
       playTime: s.playTime || 0,
+      record: s.record || 0,
+      recordWorld: s.recordWorld || '',
     });
   });
   return rows;

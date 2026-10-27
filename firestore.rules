@@ -78,8 +78,10 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create, update: if isSignedIn()
         && isMe(request.resource.data.account)
-        && request.resource.data.keys().hasOnly(['gameId', 'account', 'coins', 'gems', 'playTime', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['gameId', 'account', 'coins', 'gems', 'playTime', 'updatedAt', 'record', 'recordWorld'])
         && request.resource.data.coins is number && request.resource.data.gems is number && request.resource.data.playTime is number
+        && request.resource.data.get('record', 0) is number
+        && request.resource.data.get('recordWorld', '') is string && request.resource.data.get('recordWorld', '').size() <= 20
         && scoreId == request.resource.data.gameId + '_' + request.resource.data.account;
       allow delete: if isAdmin();
     }
