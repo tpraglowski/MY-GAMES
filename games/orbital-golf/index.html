@@ -129,6 +129,10 @@
   .solar .locked-label { fill: #7d8590; }
   .portals { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.4rem; }
   .portal { flex: 1 1 5.5rem; text-align: center; padding: 0.6rem 0.3rem; border: 2px dashed #5a6270; border-radius: 12px; background: #1b2230; color: #8a93a3; font-size: 0.75rem; font-weight: 800; }
+  .portal.is-live { cursor: pointer; border-style: solid; border-color: #ff4fa3; background: #2a1040; color: #ffd6ec; }
+  .portal.is-live.is-locked { border-color: #5a6270; background: #1b2230; color: #8a93a3; }
+  .portal.is-live .swirl { filter: none; opacity: 1; }
+  .portal.is-live.is-locked .swirl { filter: grayscale(1); opacity: 0.6; }
   .portal .swirl { display: block; font-size: 1.9rem; filter: grayscale(1); opacity: 0.6; animation: swirl 6s linear infinite; }
   @keyframes swirl { to { transform: rotate(360deg); } }
   .row { display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem; border: 2px solid #1d6b4c; border-radius: 12px; background: #0b3a2b; }
@@ -283,8 +287,8 @@ window.addEventListener('error', function (e) {
 
 <script>
 (function () {
-  var DT = 1 / 120, MAXLV = 100, CHUNK = 60, BALL_R = 0.3;
-  var VERSION = '3.2', BUILD = '2026-10-31';
+  var DT = 1 / 120, MAXLV = 120, CHUNK = 60, BALL_R = 0.3;
+  var VERSION = '3.3', BUILD = '2026-10-31';
   var GREEN_R = 24; // lighter putting green around each hole (flat; finish with a chip)
   var CURV_R = 900; // virtual planet radius (m) for the horizon curvature at altitude
 
@@ -370,6 +374,12 @@ window.addEventListener('error', function (e) {
       hz: { water: 0.1, sand: 0.2, trees: 0.3, pole: 0.1 }, tree: 'crystal', house: null, crystalCol: '#3d5fd0', crystalHi: '#8fb0ff',
       sky: ['#0b1648', '#4a7be0'], hills: ['#4a74d6', '#2f56b3', '#1d3a8a'], ground: ['#2b4fb8', '#5d86e6'], sandColor: '#1d3a8a', waterColor: '#0a1a55',
       earn: 1024, orbit: 2560000, holes: [96000, 512000, 1600000], spaceAlt: 3200 },
+    { id: 'neotokyo', name: 'Neo-Tokio', rollDrag: 0.7, eMax: 0.55, g: 90, drag: 0.0, mu: 0.35, muSand: 1.3, e: 0.3, eSand: 0.08, skip: false, noClouds: true, noHillTrees: true, maxT: 3000,
+      skyline: true, night: true, sunCore: 'rgba(255,45,110,', sunGlow: 'rgba(255,70,150,', sunRays: false, tuft: 'rgba(0,229,255,0.85)', haze: 'rgba(255,79,163,',
+      A1: 3.0, f1: 0.03, p1: 0.5, A2: 1.6, f2: 0.09, p2: 1.0, A3: 6.0, f3: 0.01, p3: 0.3,
+      hz: { water: 0.12, sand: 0.2, trees: 0.3, pole: 0.12 }, tree: 'torii', house: 'shop',
+      sky: ['#12062e', '#ff3d8b'], hills: ['#150a33', '#1e1049', '#2b1766'], ground: ['#1a1030', '#00e5ff'], sandColor: '#c2187a', waterColor: '#0a3a5c',
+      earn: 2048, orbit: 5120000, holes: [192000, 1024000, 3200000], spaceAlt: 3500 },
   ];
   WORLDS.forEach(function (W) {
     W.holeY = W.holes.map(function (hx) { return baseHeight(W, hx); });
@@ -995,7 +1005,7 @@ window.addEventListener('error', function (e) {
     if (ball.birds > 0) {
       var bb = Math.round(40 * W.earn * ball.birds);
       coins += bb;
-      lines.push('🐦 Trafione ptaki: <b>' + ball.birds + '</b> · <b>+' + fmt(bb) + ' 🪙</b>');
+      lines.push((W.id === 'neotokyo' ? '🤖 Trafione drony: <b>' : '🐦 Trafione ptaki: <b>') + ball.birds + '</b> · <b>+' + fmt(bb) + ' 🪙</b>');
     }
     if (ball.trees > 0) lines.push('🔥 Zniszczone drzewa: <b>' + ball.trees + '</b>');
     if (res === 'hole') {
@@ -1046,7 +1056,7 @@ window.addEventListener('error', function (e) {
   }
   function spawnFeathers(x, y) {
     for (var i = 0; i < 10; i++) {
-      particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 8, vy: Math.random() * 6, t: 0, life: 1.1, col: '#f5f5f5', r: 0.22, g: 4 });
+      particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 8, vy: Math.random() * 6, t: 0, life: 1.1, col: W.id === 'neotokyo' ? (Math.random() < 0.5 ? '#35f0ff' : '#ff4fa3') : '#f5f5f5', r: 0.22, g: 4 });
     }
   }
 
@@ -1125,7 +1135,7 @@ window.addEventListener('error', function (e) {
         trailT += stp;
         if (trailT > 0.05 * scale) { trailT = 0; trail.push({ x: ball.x, y: ball.y }); if (trail.length > 90) trail.shift(); }
         if (ball.splash) { spawnSplash(ball.splash.x, ball.splash.y, ball.splash.v); ball.splash = null; }
-        if (ball.feather) { spawnFeathers(ball.feather.x, ball.feather.y); ball.feather = null; banner('Ptak! 🐦'); }
+        if (ball.feather) { spawnFeathers(ball.feather.x, ball.feather.y); ball.feather = null; banner(W.id === 'neotokyo' ? 'Dron! 🤖' : 'Ptak! 🐦'); }
       }
       if (ball.crash) { spawnCrash(ball.crash); ball.crash = null; banner('Drzewo zniszczone! 💥'); }
       if (ball.fire) spawnFire();
@@ -1187,7 +1197,45 @@ window.addEventListener('error', function (e) {
   }
 
   // Big cartoon bird (faces right): body, belly, beak, eye, flapping wings.
+  function drawSkyline(layer, scroll, baseS, fade) { // Neo-Tokio: three layers of towers with lit windows and neon signs
+    var bw = 34 + layer * 16, boff = ((scroll % bw) + bw) % bw;
+    for (var bp = -boff; bp < VW + bw; bp += bw) {
+      var bi = Math.floor((bp + scroll) / bw), bh = hash(bi, layer, 91);
+      var top = baseS - (0.09 + bh * 0.24 + (2 - layer) * 0.035) * VH;
+      ctx.fillStyle = W.hills[layer]; ctx.fillRect(bp, top, bw - 3, VH - top);
+      for (var wr = 0; top + 8 + wr * 10 < baseS; wr++) {
+        for (var wc = 0; wc < Math.floor((bw - 8) / 8); wc++) {
+          var wh = hash(bi, wr * 9 + wc, layer + 5);
+          if (wh < 0.6) continue;
+          ctx.fillStyle = wh < 0.76 ? '#35f0ff' : (wh < 0.9 ? '#ff4fa3' : '#ffd23f');
+          ctx.globalAlpha = fade * (0.45 + 0.1 * layer);
+          ctx.fillRect(bp + 4 + wc * 8, top + 7 + wr * 10, 3.5, 4.5);
+        }
+      }
+      ctx.globalAlpha = fade;
+      if (bh > 0.78) { // neon sign on the side
+        ctx.fillStyle = bh > 0.9 ? 'rgba(255,79,163,0.9)' : 'rgba(53,240,255,0.9)';
+        ctx.fillRect(bp + bw - 9, top + 12, 3, Math.min(34, baseS - top - 16));
+      }
+      if (bh < 0.14) { ctx.fillStyle = '#ff2850'; ctx.fillRect(bp + bw * 0.45, top - 8, 2, 8); if (Math.floor(clock * 1.5 + bi) % 2) ctx.fillRect(bp + bw * 0.45 - 1, top - 10, 4, 3); }
+    }
+  }
+
+  function drawDrone(x, y, u, spin) { // Neo-Tokio: a hovering camera drone instead of a bird
+    var rw = (0.25 + 0.75 * Math.abs(spin)) * 0.95 * u;
+    ctx.save(); ctx.translate(x, y);
+    ctx.fillStyle = '#272c46'; ctx.beginPath(); ctx.ellipse(0, 0.15 * u, 1.0 * u, 0.5 * u, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#3a4066'; ctx.fillRect(-0.55 * u, -0.4 * u, 1.1 * u, 0.22 * u);
+    ctx.fillStyle = 'rgba(53,240,255,0.65)';
+    ctx.beginPath(); ctx.ellipse(-0.8 * u, -0.5 * u, rw, 0.09 * u, 0, 0, Math.PI * 2); ctx.ellipse(0.8 * u, -0.5 * u, rw, 0.09 * u, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,40,80,0.35)'; ctx.beginPath(); ctx.arc(0.62 * u, 0.12 * u, 0.42 * u, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ff2850'; ctx.beginPath(); ctx.arc(0.62 * u, 0.12 * u, 0.17 * u, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ff4fa3'; ctx.fillRect(-0.6 * u, 0.5 * u, 1.2 * u, 0.07 * u);
+    ctx.restore();
+  }
+
   function drawBigBird(x, y, u, flap) {
+    if (W.id === 'neotokyo') { drawDrone(x, y, u, flap); return; }
     var w = flap * 0.9; // -0.9 .. 0.9: wings down .. up
     ctx.save(); ctx.translate(x, y); ctx.lineJoin = 'round';
     // far wing
@@ -1236,6 +1284,14 @@ window.addEventListener('error', function (e) {
         ctx.beginPath(); ctx.moveTo(sx - wd, y1); ctx.lineTo(sx + wd, y1); ctx.lineTo(sx, y1 - ph * 0.42); ctx.closePath(); ctx.fill();
         ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(sx - wd * 0.4, y1 - ph * 0.26); ctx.lineTo(sx + wd * 0.4, y1 - ph * 0.26); ctx.lineTo(sx, y1 - ph * 0.42); ctx.closePath(); ctx.fill();
       }
+    } else if (kind === 'torii') {
+      var tw = pw * 1.1, th = ph, pil = Math.max(2, pw * 0.14);
+      ctx.fillStyle = 'rgba(255,60,100,0.28)'; ctx.fillRect(sx - tw * 0.5 - pil, sy - th - pil, tw + pil * 2, th + pil); // neon glow
+      ctx.fillStyle = '#e5173f';
+      ctx.fillRect(sx - tw * 0.4 - pil / 2, sy - th * 0.92, pil, th * 0.92); ctx.fillRect(sx + tw * 0.4 - pil / 2, sy - th * 0.92, pil, th * 0.92);
+      ctx.fillRect(sx - tw * 0.5, sy - th * 0.78, tw, pil * 0.8); // nuki
+      ctx.beginPath(); ctx.moveTo(sx - tw * 0.56, sy - th * 0.92); ctx.lineTo(sx + tw * 0.56, sy - th * 0.92); ctx.lineTo(sx + tw * 0.5, sy - th); ctx.lineTo(sx - tw * 0.5, sy - th); ctx.closePath(); ctx.fill(); // kasagi
+      ctx.fillStyle = '#35f0ff'; ctx.fillRect(sx - tw * 0.5, sy - th - pil * 0.3, tw, Math.max(1, pil * 0.25));
     } else if (kind === 'darkrock') {
       ctx.fillStyle = W.rockCol || '#5d5750';
       ctx.beginPath(); ctx.moveTo(sx - pw * 0.85, sy); ctx.lineTo(sx - pw * 0.5, sy - ph * 0.6); ctx.lineTo(sx - pw * 0.05, sy - ph); ctx.lineTo(sx + pw * 0.5, sy - ph * 0.7); ctx.lineTo(sx + pw * 0.85, sy); ctx.closePath(); ctx.fill();
@@ -1272,6 +1328,16 @@ window.addEventListener('error', function (e) {
       ctx.strokeStyle = '#eef3f6'; ctx.lineWidth = Math.max(1.5, 0.12 * s); ctx.stroke();
       ctx.fillStyle = '#7e8a95'; ctx.fillRect(sx - 0.6 * s, sy - h * 0.45, 1.2 * s, h * 0.45);
       ctx.fillStyle = '#e8453c'; ctx.fillRect(sx + w * 0.3, sy - h * 0.45 - 1.4 * s, 0.14 * s, 1.4 * s);
+      return;
+    }
+    if (kind === 'shop') { // Neo-Tokio: a small neon-lit shop with a glowing sign
+      var neon = ['#35f0ff', '#ff4fa3', '#ffd23f'][v % 3];
+      ctx.fillStyle = '#1b1238'; ctx.fillRect(sx - w / 2, sy - h * 1.15, w, h * 1.15);
+      ctx.fillStyle = neon; ctx.fillRect(sx - w / 2, sy - h * 1.15 - 0.45 * s, w, 0.45 * s);
+      ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(sx - w * 0.36, sy - h * 0.98, w * 0.72, 1.0 * s);
+      ctx.fillStyle = neon; ctx.fillRect(sx - w * 0.3, sy - h * 0.93, w * 0.6, 0.7 * s);
+      ctx.fillStyle = '#ffd23f'; ctx.fillRect(sx - w / 2 + 0.7 * s, sy - h * 0.55, 1.4 * s, 1.2 * s); ctx.fillRect(sx + w / 2 - 2.1 * s, sy - h * 0.55, 1.4 * s, 1.2 * s);
+      ctx.fillStyle = 'rgba(255,79,163,0.85)'; ctx.fillRect(sx - 0.55 * s, sy - 1.8 * s, 1.1 * s, 1.8 * s);
       return;
     }
     ctx.fillStyle = wall; ctx.fillRect(sx - w / 2, sy - h, w, h);
@@ -1397,10 +1463,11 @@ window.addEventListener('error', function (e) {
     grd.addColorStop(1, W.airless ? mix(W.sky[1], '#0a1030', 0.85) : skyAt(W.sky[1], a * 0.9, '#0a1030'));
     ctx.fillStyle = grd; ctx.fillRect(0, 0, VW, VH);
     var i, k, f, fs, px;
-    if (a > 0.05) {
+    var starA = Math.max(a, W.night ? 0.55 : 0);
+    if (starA > 0.05) {
       ctx.fillStyle = '#fff';
       for (i = 0; i < stars.length; i++) {
-        ctx.globalAlpha = a * (0.4 + stars[i].r / 3);
+        ctx.globalAlpha = starA * (0.4 + stars[i].r / 3);
         ctx.beginPath(); ctx.arc(stars[i].x * VW, stars[i].y * VH * 0.9, stars[i].r, 0, Math.PI * 2); ctx.fill();
       }
       ctx.globalAlpha = 1;
@@ -1416,11 +1483,11 @@ window.addEventListener('error', function (e) {
     } else if (sunA > 0.02) {
       var sxn = VW * 0.86, syn = VH * 0.17, sr = Math.min(VW, VH) * 0.06;
       var sg = ctx.createRadialGradient(sxn, syn, sr * 0.3, sxn, syn, sr * 3);
-      sg.addColorStop(0, 'rgba(255,240,150,' + (0.9 * sunA) + ')'); sg.addColorStop(1, 'rgba(255,240,150,0)');
+      sg.addColorStop(0, (W.sunGlow || 'rgba(255,240,150,') + (0.9 * sunA) + ')'); sg.addColorStop(1, (W.sunGlow || 'rgba(255,240,150,') + '0)');
       ctx.fillStyle = sg; ctx.fillRect(sxn - sr * 3, syn - sr * 3, sr * 6, sr * 6);
-      ctx.fillStyle = 'rgba(255,225,70,' + sunA + ')'; ctx.beginPath(); ctx.arc(sxn, syn, sr, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = (W.sunCore || 'rgba(255,225,70,') + sunA + ')'; ctx.beginPath(); ctx.arc(sxn, syn, sr, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = 'rgba(255,225,70,' + (0.8 * sunA) + ')'; ctx.lineWidth = 3;
-      for (i = 0; i < 12; i++) {
+      for (i = 0; W.sunRays !== false && i < 12; i++) {
         var ra = i * Math.PI / 6 + clock * 0.2;
         ctx.beginPath(); ctx.moveTo(sxn + Math.cos(ra) * sr * 1.25, syn + Math.sin(ra) * sr * 1.25); ctx.lineTo(sxn + Math.cos(ra) * sr * 1.6, syn + Math.sin(ra) * sr * 1.6); ctx.stroke();
       }
@@ -1458,6 +1525,7 @@ window.addEventListener('error', function (e) {
       for (var layer = 0; layer < 3; layer++) {
         var fac = 0.12 + layer * 0.16, lift = (0.2 - layer * 0.06) * VH, amp = (0.07 - layer * 0.012) * VH;
         var scroll = bgX * BG_PX * fac; // by distance from the tee, independent of zoom
+        if (W.skyline) { drawSkyline(layer, scroll, groundScreen - lift * 0.55, hillFade); continue; } // Neo-Tokio towers
         ctx.fillStyle = W.hills[layer];
         ctx.beginPath(); ctx.moveTo(0, VH);
         var ys = [];
@@ -1835,7 +1903,7 @@ window.addEventListener('error', function (e) {
   // other planets are single worlds. Locked worlds are grey. Clicking the Sun shows portals to
   // worlds that don't exist yet. Tapping a world selects it; the card under the map starts it.
   var mapSel = null; // world index, or -1 for the Sun
-  var WORLD_ICONS = ['🌳', '🏜️', '❄️', '🌕', '🔴', '☿️', '🌋', '🟠', '🪐', '🧊', '🔵'];
+  var WORLD_ICONS = ['🌳', '🏜️', '❄️', '🌕', '🔴', '☿️', '🌋', '🟠', '🪐', '🧊', '🔵', '🌃'];
   var SVGNS = 'http://www.w3.org/2000/svg';
   function sv(tag, attrs, parent) {
     var n = document.createElementNS(SVGNS, tag);
@@ -1920,9 +1988,20 @@ window.addEventListener('error', function (e) {
       box.appendChild(el('div', 'ico', '☀️'));
       var inf = el('div', 'info');
       inf.appendChild(el('b', '', 'Słońce — portale'));
-      inf.appendChild(el('span', '', 'Tu pojawią się portale do kolejnych światów. Na razie są zamknięte — już wkrótce!'));
+      inf.appendChild(el('span', '', 'Portale prowadzą do kolejnych światów. Pierwszy — Neo-Tokio — otwiera się po orbicie na Neptunie. Pozostałe już wkrótce!'));
       var pr = el('div', 'portals');
-      for (var q = 1; q <= 3; q++) { var pc = el('div', 'portal'); pc.appendChild(el('span', 'swirl', '🌀')); pc.appendChild(document.createTextNode('Portal ' + q + ' · wkrótce')); pr.appendChild(pc); }
+      var neoIdx = -1;
+      for (var wi2 = 0; wi2 < WORLDS.length; wi2++) if (WORLDS[wi2].id === 'neotokyo') neoIdx = wi2;
+      for (var q = 1; q <= 3; q++) {
+        var pc = el('div', 'portal'), live = q === 1 && neoIdx >= 0;
+        pc.appendChild(el('span', 'swirl', '🌀'));
+        if (live) {
+          pc.className = 'portal is-live' + (neoIdx <= save.unlocked ? '' : ' is-locked');
+          pc.appendChild(document.createTextNode(WORLDS[neoIdx].name + (neoIdx <= save.unlocked ? '' : ' · 🔒')));
+          (function (idx) { pc.addEventListener('click', function () { select(idx); }); })(neoIdx);
+        } else pc.appendChild(document.createTextNode('Portal ' + q + ' · wkrótce'));
+        pr.appendChild(pc);
+      }
       inf.appendChild(pr);
       box.appendChild(inf);
       body.appendChild(box);
@@ -1932,7 +2011,7 @@ window.addEventListener('error', function (e) {
     if (open2) btn = buyBtn(cur ? 'Tu grasz' : 'Graj tutaj', !cur, function () { setWorld(mapSel); $('shop').classList.remove('is-open'); });
     else btn = buyBtn('🔒', false, null);
     var desc = open2 ? 'Orbita: ' + fmt(w.orbit) + ' m · rekord ' + fmt(save.best[mapSel]) + ' m · zarobki ×' + w.earn
-      : 'Osiągnij orbitę w poprzednim świecie (' + WORLDS[mapSel - 1].name + ')';
+      : 'Osiągnij orbitę w poprzednim świecie (' + WORLDS[mapSel - 1].name + ')' + (w.id === 'neotokyo' ? ' — portal ze Słońca' : '');
     body.appendChild(rowFor(WORLD_ICONS[mapSel], w.name, desc, btn, cur));
   }
 
@@ -2190,22 +2269,36 @@ window.addEventListener('error', function (e) {
       list.appendChild(row);
     });
   }
+  var lbTimers = [];
+  function lbClearTimers() { while (lbTimers.length) clearTimeout(lbTimers.pop()); }
+  function lbRequest() { try { window.parent.postMessage({ type: 'mg-leaderboard-request' }, location.origin); } catch (eL) { /* ignore */ } }
   function openLb() {
     lbRows = null; lbNote = '';
+    lbClearTimers();
     $('lb-modal').classList.add('is-open');
     renderLb();
     sendStats();
-    if (inFrame) { try { window.parent.postMessage({ type: 'mg-leaderboard-request' }, location.origin); } catch (eL) { /* ignore */ } }
+    if (!inFrame) return;
+    lbRequest();
+    // no answer (e.g. an old copy of the site is still open in this tab): ask again, then give up politely
+    lbTimers.push(setTimeout(function () { if (lbRows === null) lbRequest(); }, 4000));
+    lbTimers.push(setTimeout(function () {
+      if (lbRows === null) {
+        lbRows = []; lbNote = 'Nie udało się wczytać tabeli. Odśwież stronę (Ctrl+F5) i spróbuj ponownie.';
+        renderLb();
+      }
+    }, 15000));
   }
   window.addEventListener('message', function (e) {
     var d = e.data;
     if (e.origin !== location.origin || e.source !== window.parent || !d || d.type !== 'mg-leaderboard') return;
+    lbClearTimers();
     lbRows = d.rows || [];
-    lbNote = d.error ? 'Nie udało się wczytać tabeli.' : '';
+    lbNote = d.error ? 'Nie udało się wczytać tabeli (' + d.error + '). Spróbuj ponownie za chwilę.' : '';
     renderLb();
   });
   $('btn-lb').addEventListener('click', openLb);
-  $('lb-close').addEventListener('click', function () { $('lb-modal').classList.remove('is-open'); });
+  $('lb-close').addEventListener('click', function () { lbClearTimers(); $('lb-modal').classList.remove('is-open'); });
   [].slice.call($('lb-tabs').children).forEach(function (b) {
     b.addEventListener('click', function () { lbSort = b.getAttribute('data-sort'); renderLb(); });
   });

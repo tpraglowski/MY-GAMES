@@ -474,6 +474,15 @@ function buildMessagesPanel(gameId) {
 //   site -> game  { type: 'mg-leaderboard', rows: [{ name, coins, gems, playTime }] }
 let gameBridgeHandler = null;
 
+// A hung Firestore write (offline, blocked network) must not leave the game's score table on
+// "loading" forever: every step the table waits for has a time limit.
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Przekroczono czas oczekiwania na serwer.')), ms)),
+  ]);
+}
+
 function bindGameBridge(iframe, gameId) {
   if (gameBridgeHandler) window.removeEventListener('message', gameBridgeHandler);
   let lastSent = 0;
@@ -502,8 +511,9 @@ function bindGameBridge(iframe, gameId) {
     } else if (e.data.type === 'mg-leaderboard-request') {
       // Save the viewer's own latest stats first, so the table already includes them.
       if (timer) clearTimeout(timer);
-      flush()
-        .then(() => getLeaderboard(gameId))
+      withTimeout(flush(), 3000)
+        .catch(() => {}) // a slow own-score write only means the table shows slightly older numbers
+        .then(() => withTimeout(getLeaderboard(gameId), 12000))
         .then((rows) => iframe.contentWindow.postMessage({ type: 'mg-leaderboard', rows }, location.origin))
         .catch((err) => iframe.contentWindow.postMessage({ type: 'mg-leaderboard', rows: [], error: err.message }, location.origin));
     }
