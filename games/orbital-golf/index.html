@@ -275,8 +275,8 @@ window.addEventListener('error', function (e) {
 
 <script>
 (function () {
-  var DT = 1 / 120, MAXLV = 40, CHUNK = 60, BALL_R = 0.3;
-  var VERSION = '3.0', BUILD = '2026-10-27';
+  var DT = 1 / 120, MAXLV = 100, CHUNK = 60, BALL_R = 0.3;
+  var VERSION = '3.1', BUILD = '2026-10-31';
   var GREEN_R = 24; // lighter putting green around each hole (flat; finish with a chip)
   var CURV_R = 900; // virtual planet radius (m) for the horizon curvature at altitude
 
@@ -322,16 +322,46 @@ window.addEventListener('error', function (e) {
       hz: { water: 0.14, sand: 0.2, trees: 0.3, pole: 0.1 }, tree: 'pine', house: 'cabin',
       sky: ['#6ec0ff', '#eaf6ff'], hills: ['#e4f1ff', '#bcd9f2', '#9cc3e6'], ground: ['#d3e3f2', '#ffffff'], sandColor: '#aed6f1', waterColor: '#4d9bd6',
       earn: 4, orbit: 10000, holes: [400, 1500, 5500], spaceAlt: 1100 },
-    { id: 'moon', name: 'Księżyc', g: 1.62, drag: 0.0, mu: 0.35, muSand: 1.2, e: 0.34, eSand: 0.1, skip: false,
+    { id: 'moon', name: 'Księżyc', g: 1.62, drag: 0.0, mu: 0.35, muSand: 1.2, e: 0.34, eSand: 0.1, skip: false, airless: true, noClouds: true, noHillTrees: true, tuft: false,
       A1: 4.5, f1: 0.03, p1: 0.7, A2: 2.0, f2: 0.08, p2: 2.5, A3: 6.0, f3: 0.015, p3: 1.9,
       hz: { water: 0.14, sand: 0.2, trees: 0.25, pole: 0.1 }, tree: 'rock', house: null,
       sky: ['#04060f', '#10172c'], hills: ['#2a2f3d', '#3a4052', '#4b5266'], ground: ['#8a8d94', '#b4b7be'], sandColor: '#6b6e75', waterColor: '#161a26',
       earn: 8, orbit: 40000, holes: [1500, 8000, 25000], spaceAlt: 0 },
-    { id: 'mars', name: 'Mars', g: 3.72, drag: 0.012, mu: 0.4, muSand: 1.5, e: 0.34, eSand: 0.08, skip: false, noBirds: true,
+    { id: 'mars', name: 'Mars', g: 3.72, drag: 0.012, mu: 0.4, muSand: 1.5, e: 0.34, eSand: 0.08, skip: false, noBirds: true, noClouds: true, noHillTrees: true, tuft: 'rgba(120,48,26,0.9)', haze: 'rgba(255,175,130,',
       A1: 4.0, f1: 0.028, p1: 0.4, A2: 2.2, f2: 0.07, p2: 1.6, A3: 7.0, f3: 0.012, p3: 0.8,
       hz: { water: 0.1, sand: 0.25, trees: 0.28, pole: 0.1 }, tree: 'redrock', house: 'dome',
       sky: ['#c4663a', '#f6cba2'], hills: ['#c2693f', '#a4502d', '#85391f'], ground: ['#b9522e', '#e08a5a'], sandColor: '#7d3a24', waterColor: '#58a3b8',
       earn: 16, orbit: 30000, holes: [1200, 7000, 20000], spaceAlt: 1400 },
+    { id: 'mercury', rollDrag: 0.7, eMax: 0.55, name: 'Merkury', g: 3.9, drag: 0.0, mu: 0.4, muSand: 1.4, e: 0.3, eSand: 0.08, skip: false, noBirds: true, airless: true, noClouds: true, noHillTrees: true, tuft: false, maxT: 600,
+      A1: 5.0, f1: 0.026, p1: 1.1, A2: 2.4, f2: 0.075, p2: 0.4, A3: 8.0, f3: 0.011, p3: 2.2,
+      hz: { water: 0.1, sand: 0.25, trees: 0.28, pole: 0.1 }, tree: 'darkrock', house: 'dome', rockCol: '#5d5750', rockHi: '#7d766d',
+      sky: ['#05060b', '#171a26'], hills: ['#4a4640', '#5e5953', '#756f67'], ground: ['#8d867c', '#b8b0a4'], sandColor: '#6f6960', waterColor: '#2a2622',
+      earn: 32, orbit: 80000, holes: [3000, 16000, 50000], spaceAlt: 0 },
+    { id: 'venus', rollDrag: 0.7, eMax: 0.55, name: 'Wenus', g: 5.9, drag: 0.0, mu: 0.5, muSand: 1.7, e: 0.3, eSand: 0.08, skip: false, noBirds: true, noHillTrees: true, tuft: 'rgba(120,60,20,0.9)', haze: 'rgba(255,190,90,', maxT: 900,
+      A1: 5.5, f1: 0.024, p1: 0.2, A2: 2.6, f2: 0.07, p2: 1.9, A3: 9.0, f3: 0.01, p3: 0.9,
+      hz: { water: 0.12, sand: 0.22, trees: 0.28, pole: 0.1 }, tree: 'darkrock', house: null, rockCol: '#6b3a1a', rockHi: '#9a5a2a',
+      sky: ['#c98a2b', '#f6dc8e'], hills: ['#d49a4a', '#b87a34', '#945e25'], ground: ['#a8672b', '#d99a52'], sandColor: '#7a4a1f', waterColor: '#ff5a1f',
+      earn: 64, orbit: 160000, holes: [6000, 32000, 100000], spaceAlt: 1800 },
+    { id: 'jupiter', rollDrag: 0.7, eMax: 0.55, name: 'Jowisz', g: 10.0, drag: 0.0, mu: 0.3, muSand: 1.2, e: 0.3, eSand: 0.1, skip: false, noBirds: true, noHillTrees: true, tuft: 'rgba(150,90,50,0.8)', haze: 'rgba(255,200,150,', maxT: 1200,
+      A1: 6.0, f1: 0.022, p1: 0.9, A2: 3.0, f2: 0.065, p2: 2.1, A3: 10.0, f3: 0.009, p3: 1.4,
+      hz: { water: 0.1, sand: 0.22, trees: 0.3, pole: 0.1 }, tree: 'cloudtower', house: null,
+      sky: ['#a8602e', '#f0cf9e'], hills: ['#e8c9a5', '#cfa87c', '#b88a5d'], ground: ['#d9b38c', '#f2dcc0'], sandColor: '#a8683a', waterColor: '#7a3b1f',
+      earn: 128, orbit: 320000, holes: [12000, 64000, 200000], spaceAlt: 2200 },
+    { id: 'saturn', rollDrag: 0.7, eMax: 0.55, name: 'Saturn', g: 12.3, drag: 0.0, mu: 0.25, muSand: 1.1, e: 0.3, eSand: 0.1, skip: false, noBirds: true, noHillTrees: true, tuft: 'rgba(170,140,70,0.8)', haze: 'rgba(255,230,160,', maxT: 1500, rings: true,
+      A1: 6.5, f1: 0.02, p1: 0.4, A2: 3.2, f2: 0.06, p2: 1.2, A3: 11.0, f3: 0.008, p3: 2.6,
+      hz: { water: 0.1, sand: 0.22, trees: 0.3, pole: 0.1 }, tree: 'crystal', house: null, crystalCol: '#e8d8a0', crystalHi: '#fff6d2',
+      sky: ['#7a6a45', '#efe3bd'], hills: ['#e6d29a', '#cdb77f', '#a8945e'], ground: ['#cdb77f', '#efe0a8'], sandColor: '#9b8754', waterColor: '#6b86a8',
+      earn: 256, orbit: 640000, holes: [24000, 128000, 400000], spaceAlt: 2500 },
+    { id: 'uranus', rollDrag: 0.7, eMax: 0.55, name: 'Uran', g: 21.5, drag: 0.0, mu: 0.12, muSand: 0.9, e: 0.32, eSand: 0.1, skip: false, noBirds: true, noHillTrees: true, tuft: 'rgba(60,160,170,0.8)', haze: 'rgba(170,240,245,', maxT: 1800,
+      A1: 7.0, f1: 0.018, p1: 1.3, A2: 3.4, f2: 0.055, p2: 0.3, A3: 12.0, f3: 0.007, p3: 1.0,
+      hz: { water: 0.1, sand: 0.2, trees: 0.3, pole: 0.1 }, tree: 'crystal', house: null, crystalCol: '#7fe3ea', crystalHi: '#d5fbff',
+      sky: ['#2f9fab', '#c9f5f7'], hills: ['#a5e3e6', '#7cc9cf', '#5bb0b8'], ground: ['#7fd0d6', '#c5f1f3'], sandColor: '#4f9aa3', waterColor: '#1f6f86',
+      earn: 512, orbit: 1280000, holes: [48000, 256000, 800000], spaceAlt: 2800 },
+    { id: 'neptune', rollDrag: 0.7, eMax: 0.55, name: 'Neptun', g: 41.8, drag: 0.0, mu: 0.1, muSand: 0.8, e: 0.32, eSand: 0.1, skip: false, noBirds: true, noHillTrees: true, tuft: 'rgba(40,70,170,0.8)', haze: 'rgba(130,170,255,', maxT: 2400,
+      A1: 7.5, f1: 0.016, p1: 0.6, A2: 3.6, f2: 0.05, p2: 2.4, A3: 13.0, f3: 0.006, p3: 1.7,
+      hz: { water: 0.1, sand: 0.2, trees: 0.3, pole: 0.1 }, tree: 'crystal', house: null, crystalCol: '#3d5fd0', crystalHi: '#8fb0ff',
+      sky: ['#0b1648', '#4a7be0'], hills: ['#4a74d6', '#2f56b3', '#1d3a8a'], ground: ['#2b4fb8', '#5d86e6'], sandColor: '#1d3a8a', waterColor: '#0a1a55',
+      earn: 1024, orbit: 2560000, holes: [96000, 512000, 1600000], spaceAlt: 3200 },
   ];
   WORLDS.forEach(function (W) {
     W.holeY = W.holes.map(function (hx) { return baseHeight(W, hx); });
@@ -539,11 +569,11 @@ window.addEventListener('error', function (e) {
       var nl = Math.sqrt(1 + sl * sl), nx = -sl / nl, ny = 1 / nl;
       var onSand = surf && surf.type === 'sand';
       var mu = P.muScale * (onSand ? W.muSand : W.mu);
-      var e = Math.min(0.82, (onSand ? W.eSand : W.e) * P.bounce);
+      var e = Math.min(W.eMax || 0.82, (onSand ? W.eSand : W.e) * P.bounce);
       b.y = gy;
       var vn = b.vx * nx + b.vy * ny;
       if (vn < 0) {
-        if (vn > -1.5) e = 0;
+        if (vn > -1.5) e = 0; else b.hops = (b.hops || 0) + 1;
         b.vx -= (1 + e) * vn * nx; b.vy -= (1 + e) * vn * ny;
         var tx0 = ny, ty0 = -nx;
         var kd = (b.putt && vn > -1.5) ? 0 : Math.min(0.5, 0.04 + 0.06 * mu); // a putt just rolls: no impact damping
@@ -555,6 +585,7 @@ window.addEventListener('error', function (e) {
       var vt = b.vx * tx + b.vy * ty, vn1 = b.vx * nx + b.vy * ny;
       var dec = mu * W.g * h * ny;
       if (vt > 0) vt = Math.max(0, vt - dec); else vt = Math.min(0, vt + dec);
+      if (W.rollDrag) vt *= Math.exp(-W.rollDrag * h); // far planets: a km/s ball must not roll for minutes
       b.vx = vt * tx + vn1 * nx; b.vy = vt * ty + vn1 * ny;
       sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
       if (sp < 0.35) b.rest += h; else b.rest = 0;
@@ -580,7 +611,7 @@ window.addEventListener('error', function (e) {
     b.t += dt;
     if (b.fire && (b.rest > 0.05 || Math.sqrt(b.vx * b.vx + b.vy * b.vy) < 14)) b.fire = false;
     if (b.rest > 0.45) return 'stop';
-    return b.t > 240 ? 'stop' : null;
+    return b.t > (W.maxT || 240) ? 'stop' : null;
   }
 
   // ---------- Upgrades, balls, skins ----------
@@ -610,12 +641,18 @@ window.addEventListener('error', function (e) {
   var HOLE_NAMES = ['Birdie', 'Eagle', 'Albatros'];
   var HOLE_BONUS = [150, 600, 2500];
 
-  function upgradeCost(lv) { return Math.round(20 * Math.pow(1.3, lv)); }
+  // Cost grows x1.3 per level up to 40, then x1.15 per level (levels 41-100 are for the far planets).
+  function upgradeCost(lv) {
+    return lv < 40 ? Math.round(20 * Math.pow(1.3, lv)) : Math.round(20 * Math.pow(1.3, 40) * Math.pow(1.15, lv - 40));
+  }
+  // Launch-speed multipliers of the Strength / Speed upgrades (+2% more per level beyond 40).
+  function strMul(l) { return (1 + 0.12 * l) * Math.pow(1.02, Math.max(0, l - 40)); }
+  function spdMul(l) { return (1 + 0.05 * l) * Math.pow(1.02, Math.max(0, l - 40)); }
 
   function statsFor(W, up, ball) {
     var spd = up.spd + ball.spd, bnc = up.bnc + ball.bnc;
     return {
-      v0: 22 * (1 + 0.12 * up.str) * (1 + 0.05 * spd) * ball.power,
+      v0: 22 * strMul(up.str) * spdMul(spd) * ball.power,
       drag: W.drag * (1 - Math.min(0.6, 0.02 * spd)),
       muScale: 1 - Math.min(0.65, 0.022 * spd),
       bounce: 1 + 0.035 * bnc,
@@ -623,18 +660,32 @@ window.addEventListener('error', function (e) {
     };
   }
 
+  // Far above the ground at high speed nothing can be hit, so a long flight is integrated
+  // in big steps (keeps minute-long km/s flights on the far planets cheap, even on phones).
+  var FAST_H = 0.1;
+  function isHigh(b, W) {
+    var sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+    return !!W.maxT && sp > 150 && b.y - groundY(W, b.x) > 90 + 0.4 * Math.abs(b.vy); // only the far planets (maxT set)
+  }
+  function stepFast(b, W, P, h) {
+    var dg = Math.exp(-P.drag * h);
+    b.vx *= dg; b.vy *= dg;
+    b.vy -= W.g * h;
+    b.x += b.vx * h; b.y += b.vy * h;
+    b.t += h; b.rest = 0;
+  }
+
   // Headless full shot (used for balancing/tests). angle defaults to the ideal one.
   function runShot(wi, up, ball, angle, mult) {
     var W = WORLDS[wi], P = statsFor(W, up, ball), b = makeBall();
     launchBall(b, P, angle === undefined ? ANG_CENTER : angle, mult === undefined ? 1.1 : mult);
-    var res = null, t = 0, maxY = 0;
-    while (t < 260) {
-      res = stepBall(b, W, P, DT);
+    var res = null, maxY = 0;
+    while (b.t < (W.maxT || 240) + 20) {
+      if (isHigh(b, W)) stepFast(b, W, P, FAST_H); else res = stepBall(b, W, P, DT);
       if (b.y > maxY) maxY = b.y;
-      t += DT;
       if (res) break;
     }
-    return { dist: b.x, res: res || 'stop', hole: b.holeIdx, t: t, maxY: maxY, birds: b.birds };
+    return { dist: b.x, res: res || 'stop', hole: b.holeIdx, t: b.t, maxY: maxY, birds: b.birds };
   }
 
   // ---------- Save data (per account, guest slot otherwise) ----------
@@ -687,6 +738,7 @@ window.addEventListener('error', function (e) {
 
   function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
   function fmtShort(n) {
+    if (n >= 1e12) return (n / 1e12).toFixed(1).replace('.', ',') + 'T';
     if (n >= 1e9) return (n / 1e9).toFixed(1).replace('.', ',') + 'G';
     if (n >= 1e6) return (n / 1e6).toFixed(1).replace('.', ',') + 'M';
     if (n >= 1e4) return Math.round(n / 1e3) + 'k';
@@ -1042,17 +1094,27 @@ window.addEventListener('error', function (e) {
       // Fast-forward the boring high part of a long flight, but never the
       // landing and roll: the factor eases (no sudden jump near the ground).
       var bspd = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy), balt = Math.max(ball.y - groundY(W, ball.x), 0), tgt;
-      if (balt > 40) tgt = ball.t < 3 ? 1 : (ball.t < 8 ? 2.5 : 5);
+      if (balt > 40) {
+        if (W.maxT) { // far planets: minutes-long flights, so ramp up hard and brake before the landing
+          tgt = ball.t < 2 ? 1 : Math.min(300, 4 + (ball.t - 2) * 8);
+          if (ball.vy < 0 && !ball.hops) tgt = Math.min(tgt, 1 + balt / Math.max(-ball.vy, 1) * 4); // brake before the first landing
+        } else tgt = ball.t < 3 ? 1 : (ball.t < 8 ? 2.5 : Math.min(150, 5 + (ball.t - 8) * 1.2));
+      }
       else if (balt > 5) tgt = 1.5;
       else tgt = clamp(bspd / 30, 1, 3);
-      timeScale += (tgt - timeScale) * Math.min(1, dt * 3);
+      if (W.maxT && tgt < timeScale) timeScale = tgt; else timeScale += (tgt - timeScale) * Math.min(1, dt * (W.maxT ? 8 : 3));
       var scale = timeScale;
       acc += dt * scale;
       var guard = 0, res = null;
       while (acc >= DT && !res && guard++ < 500) {
-        acc -= DT;
-        res = stepBall(ball, W, P, DT);
-        trailT += DT;
+        var stp = DT;
+        if (isHigh(ball, W)) {
+          stp = Math.min(acc, FAST_H);
+          stepFast(ball, W, P, stp);
+          if (ball.t > (W.maxT || 240)) res = 'stop';
+        } else res = stepBall(ball, W, P, DT);
+        acc -= stp;
+        trailT += stp;
         if (trailT > 0.05 * scale) { trailT = 0; trail.push({ x: ball.x, y: ball.y }); if (trail.length > 90) trail.shift(); }
         if (ball.splash) { spawnSplash(ball.splash.x, ball.splash.y, ball.splash.v); ball.splash = null; }
         if (ball.feather) { spawnFeathers(ball.feather.x, ball.feather.y); ball.feather = null; banner('Ptak! 🐦'); }
@@ -1166,6 +1228,21 @@ window.addEventListener('error', function (e) {
         ctx.beginPath(); ctx.moveTo(sx - wd, y1); ctx.lineTo(sx + wd, y1); ctx.lineTo(sx, y1 - ph * 0.42); ctx.closePath(); ctx.fill();
         ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(sx - wd * 0.4, y1 - ph * 0.26); ctx.lineTo(sx + wd * 0.4, y1 - ph * 0.26); ctx.lineTo(sx, y1 - ph * 0.42); ctx.closePath(); ctx.fill();
       }
+    } else if (kind === 'darkrock') {
+      ctx.fillStyle = W.rockCol || '#5d5750';
+      ctx.beginPath(); ctx.moveTo(sx - pw * 0.85, sy); ctx.lineTo(sx - pw * 0.5, sy - ph * 0.6); ctx.lineTo(sx - pw * 0.05, sy - ph); ctx.lineTo(sx + pw * 0.5, sy - ph * 0.7); ctx.lineTo(sx + pw * 0.85, sy); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = W.rockHi || '#7d766d'; ctx.beginPath(); ctx.moveTo(sx - pw * 0.5, sy - ph * 0.6); ctx.lineTo(sx - pw * 0.05, sy - ph); ctx.lineTo(sx - pw * 0.15, sy - ph * 0.25); ctx.closePath(); ctx.fill();
+    } else if (kind === 'crystal') {
+      for (var ci = -1; ci <= 1; ci++) {
+        var cw = pw * (ci === 0 ? 0.32 : 0.22), chh = ph * (ci === 0 ? 1 : 0.65), cx0 = sx + ci * pw * 0.32;
+        ctx.fillStyle = W.crystalCol || '#7fe3ea';
+        ctx.beginPath(); ctx.moveTo(cx0 - cw, sy); ctx.lineTo(cx0 - cw * 0.6, sy - chh * 0.75); ctx.lineTo(cx0, sy - chh); ctx.lineTo(cx0 + cw * 0.6, sy - chh * 0.75); ctx.lineTo(cx0 + cw, sy); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = W.crystalHi || '#d5fbff'; ctx.beginPath(); ctx.moveTo(cx0 - cw * 0.6, sy - chh * 0.75); ctx.lineTo(cx0, sy - chh); ctx.lineTo(cx0 - cw * 0.15, sy - chh * 0.2); ctx.closePath(); ctx.fill();
+      }
+    } else if (kind === 'cloudtower') {
+      ctx.fillStyle = '#f6e4cc';
+      for (var ti2 = 0; ti2 < 4; ti2++) { ctx.beginPath(); ctx.ellipse(sx + (ti2 % 2 ? 0.08 : -0.08) * pw, sy - ph * (0.12 + ti2 * 0.24), pw * (0.55 - ti2 * 0.06), ph * 0.14, 0, 0, Math.PI * 2); ctx.fill(); }
+      ctx.fillStyle = 'rgba(200,130,80,0.55)'; ctx.beginPath(); ctx.ellipse(sx + pw * 0.1, sy - ph * 0.12, pw * 0.4, ph * 0.08, 0, 0, Math.PI * 2); ctx.fill();
     } else if (kind === 'redrock') {
       ctx.fillStyle = '#7a3a22';
       ctx.beginPath(); ctx.moveTo(sx - pw * 0.8, sy); ctx.lineTo(sx - pw * 0.4, sy - ph * 0.65); ctx.lineTo(sx + pw * 0.15, sy - ph); ctx.lineTo(sx + pw * 0.55, sy - ph * 0.55); ctx.lineTo(sx + pw * 0.8, sy); ctx.closePath(); ctx.fill();
@@ -1308,8 +1385,8 @@ window.addEventListener('error', function (e) {
     var grd = ctx.createLinearGradient(0, 0, 0, VH);
     // on the way up the sky passes through deep blue before turning black
     function skyAt(c0, t, space) { return t < 0.5 ? mix(c0, '#2a7fd4', t * 2) : mix('#2a7fd4', space, (t - 0.5) * 2); }
-    grd.addColorStop(0, W.id === 'moon' ? mix(W.sky[0], '#01020a', 1) : skyAt(W.sky[0], a, '#01020a'));
-    grd.addColorStop(1, W.id === 'moon' ? mix(W.sky[1], '#0a1030', 0.85) : skyAt(W.sky[1], a * 0.9, '#0a1030'));
+    grd.addColorStop(0, W.airless ? mix(W.sky[0], '#01020a', 1) : skyAt(W.sky[0], a, '#01020a'));
+    grd.addColorStop(1, W.airless ? mix(W.sky[1], '#0a1030', 0.85) : skyAt(W.sky[1], a * 0.9, '#0a1030'));
     ctx.fillStyle = grd; ctx.fillRect(0, 0, VW, VH);
     var i, k, f, fs, px;
     if (a > 0.05) {
@@ -1341,7 +1418,15 @@ window.addEventListener('error', function (e) {
       }
     }
     // clouds (parallax)
-    if (a < 0.95 && W.id !== 'moon' && W.id !== 'mars') {
+    if (W.rings) { // Saturn: its rings arc across the sky
+      ctx.save(); ctx.translate(VW * 0.74, VH * 0.2); ctx.rotate(-0.22); ctx.globalAlpha = 0.8 * (1 - a);
+      ctx.strokeStyle = '#efe0b0'; ctx.lineWidth = Math.max(5, VH * 0.012);
+      ctx.beginPath(); ctx.ellipse(0, 0, VW * 0.34, VH * 0.06, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = '#cdb77f'; ctx.lineWidth = Math.max(3, VH * 0.007);
+      ctx.beginPath(); ctx.ellipse(0, 0, VW * 0.3, VH * 0.05, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore(); ctx.globalAlpha = 1;
+    }
+    if (a < 0.95 && !W.noClouds) {
       ctx.fillStyle = 'rgba(255,255,255,' + (0.85 * (1 - a)) + ')';
       for (i = 0; i < 8; i++) {
         var span = VW * 1.7;
@@ -1381,7 +1466,7 @@ window.addEventListener('error', function (e) {
           var ti = Math.floor((tp + scroll) / step), idx = clamp(Math.round(tp / 6), 0, ys.length - 1);
           var h1 = hash(ti, layer, 77);
           if (layer === 1 && W.house && h1 > 0.78) { drawHouse(W.house, ((ti % 3) + 3) % 3, tp, ys[idx] + 2, 3.2 * VH / 600); continue; }
-          if (h1 < 0.6 && W.id !== 'moon' && W.id !== 'mars') {
+          if (h1 < 0.6 && !W.noHillTrees) {
             var tr = (7 + h1 * 7) * (VH / 700);
             ctx.fillStyle = layer === 0 ? 'rgba(40,120,80,0.55)' : 'rgba(25,100,60,0.75)';
             ctx.fillRect(tp - 1.5, ys[idx] - tr * 0.4, 3, tr * 0.5);
@@ -1394,9 +1479,14 @@ window.addEventListener('error', function (e) {
 
     var x0 = cam.x, x1 = cam.x + VW / ppm;
     var k0 = Math.max(0, Math.floor(x0 / CHUNK) - 1), k1 = Math.floor(x1 / CHUNK) + 1;
+    // zoomed far out (a chunk is only a few pixels) obstacles/scenery are invisible: skip them
+    var kd0 = ppm > 0.25 ? k0 : 1, kd1 = ppm > 0.25 ? k1 : 0;
+    // far out the ground line only needs the smooth hills (hazards/greens are sub-pixel, and
+    // building their chunks for hundreds of columns per frame would be very slow)
+    function terrainAt(x) { return ppm > 0.25 ? groundY(W, x) : baseHeight(W, x); }
 
     // --- scenery behind the fairway: houses and background trees ---
-    for (k = k0; k <= k1; k++) {
+    for (k = kd0; k <= kd1; k++) {
       var sc = chunkScenery(W, k);
       for (i = 0; i < sc.length; i++) {
         var o = sc[i], oy;
@@ -1413,7 +1503,7 @@ window.addEventListener('error', function (e) {
     }
 
     // --- ponds (drawn behind the terrain so the bank overlaps them) ---
-    for (k = k0; k <= k1; k++) {
+    for (k = kd0; k <= kd1; k++) {
       fs = chunkFeatures(W, k);
       for (i = 0; i < fs.length; i++) {
         f = fs[i];
@@ -1427,13 +1517,13 @@ window.addEventListener('error', function (e) {
 
     // --- terrain ---
     ctx.beginPath(); ctx.moveTo(0, VH);
-    for (px = 0; px <= VW + 4; px += 4) { var gx = x0 + px / ppm; ctx.lineTo(px, syw(groundY(W, gx), gx)); }
+    for (px = 0; px <= VW + 4; px += 4) { var gx = x0 + px / ppm; ctx.lineTo(px, syw(terrainAt(gx), gx)); }
     ctx.lineTo(VW + 4, VH); ctx.closePath();
     ctx.fillStyle = W.ground[0]; ctx.fill();
     // mowing stripes
     ctx.save(); ctx.clip();
     var sw = 3, sj0 = Math.floor(x0 / sw);
-    for (var sj = sj0; sj * sw < x1; sj++) {
+    for (var sj = sj0; sw * ppm >= 2 && sj * sw < x1; sj++) { // (skipped when stripes would be sub-pixel: that was tens of thousands of fillRects)
       if (sj % 2) continue;
       ctx.fillStyle = 'rgba(255,255,255,0.07)';
       ctx.fillRect(sx(sj * sw), 0, sw * ppm, VH);
@@ -1453,14 +1543,14 @@ window.addEventListener('error', function (e) {
     }
     ctx.restore();
     ctx.beginPath();
-    for (px = 0; px <= VW + 4; px += 4) { var gx2 = x0 + px / ppm, yy2 = syw(groundY(W, gx2), gx2); if (px === 0) ctx.moveTo(px, yy2); else ctx.lineTo(px, yy2); }
+    for (px = 0; px <= VW + 4; px += 4) { var gx2 = x0 + px / ppm, yy2 = syw(terrainAt(gx2), gx2); if (px === 0) ctx.moveTo(px, yy2); else ctx.lineTo(px, yy2); }
     ctx.strokeStyle = W.ground[1]; ctx.lineWidth = Math.max(4, ppm * 0.45); ctx.lineJoin = 'round'; ctx.stroke();
     if (curve > 0.02) { // atmosphere haze along the curved horizon
-      ctx.strokeStyle = (W.id === 'mars' ? 'rgba(255,175,130,' : 'rgba(150,215,255,') + (0.35 * curve) + ')'; ctx.lineWidth = 16 + 18 * curve; ctx.stroke();
+      ctx.strokeStyle = (W.haze || 'rgba(150,215,255,') + (0.35 * curve) + ')'; ctx.lineWidth = 16 + 18 * curve; ctx.stroke();
     }
 
     // --- sand bunkers and pond surfaces ---
-    for (k = k0; k <= k1; k++) {
+    for (k = kd0; k <= kd1; k++) {
       fs = chunkFeatures(W, k);
       for (i = 0; i < fs.length; i++) {
         f = fs[i];
@@ -1486,7 +1576,7 @@ window.addEventListener('error', function (e) {
     }
 
     // --- obstacles, birds, holes, markers ---
-    for (k = k0; k <= k1; k++) {
+    for (k = kd0; k <= kd1; k++) {
       fs = chunkFeatures(W, k);
       for (i = 0; i < fs.length; i++) {
         f = fs[i];
@@ -1566,8 +1656,8 @@ window.addEventListener('error', function (e) {
     ctx.globalAlpha = 1;
 
     // --- foreground grass tufts ---
-    if (W.id !== 'moon') {
-      ctx.strokeStyle = W.id === 'snow' ? 'rgba(255,255,255,0.8)' : (W.id === 'mars' ? 'rgba(120,48,26,0.9)' : 'rgba(34,140,60,0.9)'); ctx.lineWidth = 2; ctx.lineCap = 'round';
+    if (W.tuft !== false) {
+      ctx.strokeStyle = W.tuft || (W.id === 'snow' ? 'rgba(255,255,255,0.8)' : 'rgba(34,140,60,0.9)'); ctx.lineWidth = 2; ctx.lineCap = 'round';
       var tuft = Math.max(8, 1.6 * ppm), j0 = Math.floor(x0 * ppm / (tuft * 4));
       for (var j = j0; j * tuft * 4 / ppm < x1; j++) {
         var tx = j * tuft * 4 / ppm + hash(j, 5, 5) * 2;
@@ -1614,8 +1704,8 @@ window.addEventListener('error', function (e) {
   // ---------- Upgrades (cards on the left) ----------
 
   var UPG = [
-    { id: 'str', icon: '💪', name: 'SIŁA', desc: function (l) { return 'Golfer silniejszy o ' + (l * 12) + '%'; } },
-    { id: 'spd', icon: '⚡', name: 'SZYBKOŚĆ', desc: function (l) { return 'Piłka szybsza o ' + (l * 5) + '%'; } },
+    { id: 'str', icon: '💪', name: 'SIŁA', desc: function (l) { return 'Golfer silniejszy o ' + Math.round((strMul(l) - 1) * 100) + '%'; } },
+    { id: 'spd', icon: '⚡', name: 'SZYBKOŚĆ', desc: function (l) { return 'Piłka szybsza o ' + Math.round((spdMul(l) - 1) * 100) + '%'; } },
     { id: 'bnc', icon: '🏀', name: 'ODBICIE', desc: function (l) { return 'Odbicia wyższe o ' + Math.round(l * 3.5) + '%'; } },
   ];
   var upgBuilt = false;
@@ -1732,7 +1822,7 @@ window.addEventListener('error', function (e) {
         var open = idx <= save.unlocked, sel = save.world === idx, btn;
         if (open) btn = buyBtn(sel ? 'Tu grasz' : 'Graj tutaj', !sel, function () { setWorld(idx); $('shop').classList.remove('is-open'); });
         else btn = buyBtn('🔒', false, null);
-        var icon = ['🌳', '🏜️', '❄️', '🌕', '🔴'][idx];
+        var icon = ['🌳', '🏜️', '❄️', '🌕', '🔴', '☿️', '🌋', '🟠', '🪐', '🧊', '🔵'][idx];
         var desc = open ? 'Orbita: ' + fmt(w.orbit) + ' m · rekord ' + fmt(save.best[idx]) + ' m · zarobki ×' + w.earn
           : 'Osiągnij orbitę w poprzednim świecie';
         body.appendChild(rowFor(icon, w.name, desc, btn, sel));
