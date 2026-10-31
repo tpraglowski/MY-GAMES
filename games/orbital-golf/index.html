@@ -123,6 +123,14 @@
   .tab { padding: 0.4rem 0.75rem; border-radius: 9px; border: 1px solid #2f8a63; background: transparent; color: #bfeedd; font-size: 0.78rem; font-weight: 800; cursor: pointer; font-family: inherit; }
   .tab.is-active { background: #f9c80e; color: #3a2a00; border-color: #f9c80e; }
   .modal-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0.7rem; display: flex; flex-direction: column; gap: 0.55rem; }
+  .solar { width: 100%; height: auto; display: block; border-radius: 14px; background: radial-gradient(ellipse at 10% 50%, #2a1a08 0%, #0b1022 38%, #05070f 100%); border: 2px solid #1d6b4c; user-select: none; -webkit-user-select: none; }
+  .solar .hit { cursor: pointer; }
+  .solar text { font-family: inherit; font-weight: 800; fill: #cfe3f5; pointer-events: none; }
+  .solar .locked-label { fill: #7d8590; }
+  .portals { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.4rem; }
+  .portal { flex: 1 1 5.5rem; text-align: center; padding: 0.6rem 0.3rem; border: 2px dashed #5a6270; border-radius: 12px; background: #1b2230; color: #8a93a3; font-size: 0.75rem; font-weight: 800; }
+  .portal .swirl { display: block; font-size: 1.9rem; filter: grayscale(1); opacity: 0.6; animation: swirl 6s linear infinite; }
+  @keyframes swirl { to { transform: rotate(360deg); } }
   .row { display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem; border: 2px solid #1d6b4c; border-radius: 12px; background: #0b3a2b; }
   .row.is-sel { border-color: #35d36b; }
   .row .ico { font-size: 1.5rem; width: 2rem; text-align: center; flex-shrink: 0; }
@@ -276,7 +284,7 @@ window.addEventListener('error', function (e) {
 <script>
 (function () {
   var DT = 1 / 120, MAXLV = 100, CHUNK = 60, BALL_R = 0.3;
-  var VERSION = '3.1', BUILD = '2026-10-31';
+  var VERSION = '3.2', BUILD = '2026-10-31';
   var GREEN_R = 24; // lighter putting green around each hole (flat; finish with a chip)
   var CURV_R = 900; // virtual planet radius (m) for the horizon curvature at altitude
 
@@ -1818,20 +1826,119 @@ window.addEventListener('error', function (e) {
         body.appendChild(rowFor('', s.name, 'Czapka i kamizelka', btn, sel, s.cap));
       });
     } else {
-      WORLDS.forEach(function (w, idx) {
-        var open = idx <= save.unlocked, sel = save.world === idx, btn;
-        if (open) btn = buyBtn(sel ? 'Tu grasz' : 'Graj tutaj', !sel, function () { setWorld(idx); $('shop').classList.remove('is-open'); });
-        else btn = buyBtn('🔒', false, null);
-        var icon = ['🌳', '🏜️', '❄️', '🌕', '🔴', '☿️', '🌋', '🟠', '🪐', '🧊', '🔵'][idx];
-        var desc = open ? 'Orbita: ' + fmt(w.orbit) + ' m · rekord ' + fmt(save.best[idx]) + ' m · zarobki ×' + w.earn
-          : 'Osiągnij orbitę w poprzednim świecie';
-        body.appendChild(rowFor(icon, w.name, desc, btn, sel));
-      });
+      renderSolarMap(body);
     }
+  }
+
+  // ---------- World picker: the solar system ----------
+  // Earth is split in three (Łąka / Pustynia / Śnieżna kraina) and has the Moon next to it; the
+  // other planets are single worlds. Locked worlds are grey. Clicking the Sun shows portals to
+  // worlds that don't exist yet. Tapping a world selects it; the card under the map starts it.
+  var mapSel = null; // world index, or -1 for the Sun
+  var WORLD_ICONS = ['🌳', '🏜️', '❄️', '🌕', '🔴', '☿️', '🌋', '🟠', '🪐', '🧊', '🔵'];
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  function sv(tag, attrs, parent) {
+    var n = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) if (Object.prototype.hasOwnProperty.call(attrs, k)) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  function pie(cx, cy, r, a0, a1) { // pie slice path, angles in degrees
+    var x0 = cx + r * Math.cos(a0 * Math.PI / 180), y0 = cy + r * Math.sin(a0 * Math.PI / 180);
+    var x1 = cx + r * Math.cos(a1 * Math.PI / 180), y1 = cy + r * Math.sin(a1 * Math.PI / 180);
+    return 'M' + cx + ' ' + cy + ' L' + x0.toFixed(2) + ' ' + y0.toFixed(2) + ' A' + r + ' ' + r + ' 0 0 1 ' + x1.toFixed(2) + ' ' + y1.toFixed(2) + ' Z';
+  }
+
+  function renderSolarMap(body) {
+    if (mapSel === null) mapSel = save.world;
+    var SUN = { x: 50, y: 260 };
+    var svg = sv('svg', { viewBox: '0 0 480 520', 'class': 'solar', role: 'img', 'aria-label': 'Układ słoneczny' });
+    var i;
+    for (i = 0; i < 46; i++) sv('circle', { cx: (hash(i, 1, 41) * 480).toFixed(1), cy: (hash(i, 2, 41) * 520).toFixed(1), r: (0.5 + hash(i, 3, 41) * 1.1).toFixed(2), fill: '#fff', opacity: (0.25 + hash(i, 4, 41) * 0.5).toFixed(2) }, svg);
+
+    // planets: [worldIndex(es), name, orbit radius, angle, size, colour]
+    var P = [
+      { name: 'Merkury', w: 5, r: 80, a: -30, size: 8, col: '#9a948a' },
+      { name: 'Wenus', w: 6, r: 120, a: 25, size: 11, col: '#e0a94a' },
+      { name: 'Ziemia', w: [0, 1, 2], r: 165, a: -12, size: 17, col: '#3fbf6a' },
+      { name: 'Mars', w: 4, r: 210, a: 28, size: 10, col: '#d9603a' },
+      { name: 'Jowisz', w: 7, r: 255, a: -22, size: 25, col: '#d9a066' },
+      { name: 'Saturn', w: 8, r: 300, a: 18, size: 18, col: '#e6d29a', ring: true },
+      { name: 'Uran', w: 9, r: 345, a: -26, size: 15, col: '#7fe3ea' },
+      { name: 'Neptun', w: 10, r: 390, a: 6, size: 15, col: '#3d5fd0' }
+    ];
+    P.forEach(function (pl) { sv('circle', { cx: SUN.x, cy: SUN.y, r: pl.r, fill: 'none', stroke: '#fff', 'stroke-opacity': 0.12, 'stroke-width': 1.2 }, svg); });
+
+    function select(idx) { mapSel = idx; renderShop(); }
+    var GREY = '#6c7480';
+    function worldOpen(idx) { return idx <= save.unlocked; }
+
+    // the Sun
+    var sunSel = mapSel === -1;
+    var sunG = sv('g', { 'class': 'hit' }, svg);
+    sv('circle', { cx: SUN.x, cy: SUN.y, r: 62, fill: 'rgba(255,200,60,0.16)' }, sunG);
+    sv('circle', { cx: SUN.x, cy: SUN.y, r: 40, fill: '#ffcf3a', stroke: sunSel ? '#fff' : '#ff9d1a', 'stroke-width': sunSel ? 3 : 2 }, sunG);
+    sv('circle', { cx: SUN.x - 10, cy: SUN.y - 10, r: 10, fill: 'rgba(255,255,255,0.35)' }, sunG);
+    sunG.addEventListener('click', function () { select(-1); });
+    var sunTxt = sv('text', { x: SUN.x + 6, y: SUN.y + 62, 'text-anchor': 'middle', 'font-size': 12 }, svg);
+    sunTxt.textContent = 'Słońce';
+
+    P.forEach(function (pl) {
+      var cx = SUN.x + pl.r * Math.cos(pl.a * Math.PI / 180), cy = SUN.y + pl.r * Math.sin(pl.a * Math.PI / 180);
+      var g = sv('g', {}, svg), ids = [].concat(pl.w), anyOpen = ids.some(worldOpen);
+      if (pl.ring) sv('ellipse', { cx: cx, cy: cy, rx: pl.size * 1.9, ry: pl.size * 0.5, fill: 'none', stroke: anyOpen ? '#cdb77f' : GREY, 'stroke-width': 3, transform: 'rotate(-20 ' + cx + ' ' + cy + ')' }, g);
+      if (ids.length === 1) { // a single world
+        var idx = ids[0], open = worldOpen(idx), sel = mapSel === idx;
+        var hit = sv('circle', { cx: cx, cy: cy, r: Math.max(pl.size + 7, 15), fill: 'transparent', 'class': 'hit' }, g);
+        sv('circle', { cx: cx, cy: cy, r: pl.size, fill: open ? pl.col : GREY, stroke: sel ? '#fff' : 'rgba(0,0,0,0.4)', 'stroke-width': sel ? 3 : 1.5, 'pointer-events': 'none' }, g);
+        if (open) sv('circle', { cx: cx - pl.size * 0.3, cy: cy - pl.size * 0.3, r: pl.size * 0.35, fill: 'rgba(255,255,255,0.25)', 'pointer-events': 'none' }, g);
+        hit.addEventListener('click', function () { select(idx); });
+      } else { // Earth: three parts
+        var parts = [{ w: 0, c: '#3fbf6a', a0: -90, a1: 30 }, { w: 1, c: '#e0a95a', a0: 30, a1: 150 }, { w: 2, c: '#e8f3ff', a0: 150, a1: 270 }];
+        parts.forEach(function (pt) {
+          var open = worldOpen(pt.w), sel = mapSel === pt.w;
+          var path = sv('path', { d: pie(cx, cy, pl.size, pt.a0, pt.a1), fill: open ? pt.c : GREY, stroke: sel ? '#fff' : 'rgba(0,0,0,0.5)', 'stroke-width': sel ? 3 : 1.2, 'class': 'hit' }, g);
+          path.addEventListener('click', function () { select(pt.w); });
+        });
+        // the Moon next to the Earth
+        var mx = cx + 29, my = cy - 20, mOpen = worldOpen(3), mSel = mapSel === 3;
+        var mHit = sv('circle', { cx: mx, cy: my, r: 13, fill: 'transparent', 'class': 'hit' }, g);
+        sv('circle', { cx: mx, cy: my, r: 6.5, fill: mOpen ? '#cfd3da' : GREY, stroke: mSel ? '#fff' : 'rgba(0,0,0,0.4)', 'stroke-width': mSel ? 3 : 1.2, 'pointer-events': 'none' }, g);
+        mHit.addEventListener('click', function () { select(3); });
+        var mt = sv('text', { x: mx, y: my - 11, 'text-anchor': 'middle', 'font-size': 9, 'class': mOpen ? '' : 'locked-label' }, g);
+        mt.textContent = 'Księżyc';
+      }
+      var lbl = sv('text', { x: cx, y: cy + pl.size + 15, 'text-anchor': 'middle', 'font-size': 12, 'class': anyOpen ? '' : 'locked-label' }, g);
+      lbl.textContent = pl.name;
+      if (!anyOpen) { var lk = sv('text', { x: cx, y: cy + 4, 'text-anchor': 'middle', 'font-size': Math.max(9, pl.size * 0.8), 'class': 'locked-label' }, g); lk.textContent = '🔒'; }
+    });
+    body.appendChild(svg);
+
+    // the card under the map: the selected world (or the portals, for the Sun)
+    if (mapSel === -1) {
+      var box = el('div', 'row');
+      box.appendChild(el('div', 'ico', '☀️'));
+      var inf = el('div', 'info');
+      inf.appendChild(el('b', '', 'Słońce — portale'));
+      inf.appendChild(el('span', '', 'Tu pojawią się portale do kolejnych światów. Na razie są zamknięte — już wkrótce!'));
+      var pr = el('div', 'portals');
+      for (var q = 1; q <= 3; q++) { var pc = el('div', 'portal'); pc.appendChild(el('span', 'swirl', '🌀')); pc.appendChild(document.createTextNode('Portal ' + q + ' · wkrótce')); pr.appendChild(pc); }
+      inf.appendChild(pr);
+      box.appendChild(inf);
+      body.appendChild(box);
+      return;
+    }
+    var w = WORLDS[mapSel], open2 = mapSel <= save.unlocked, cur = save.world === mapSel, btn;
+    if (open2) btn = buyBtn(cur ? 'Tu grasz' : 'Graj tutaj', !cur, function () { setWorld(mapSel); $('shop').classList.remove('is-open'); });
+    else btn = buyBtn('🔒', false, null);
+    var desc = open2 ? 'Orbita: ' + fmt(w.orbit) + ' m · rekord ' + fmt(save.best[mapSel]) + ' m · zarobki ×' + w.earn
+      : 'Osiągnij orbitę w poprzednim świecie (' + WORLDS[mapSel - 1].name + ')';
+    body.appendChild(rowFor(WORLD_ICONS[mapSel], w.name, desc, btn, cur));
   }
 
   function openShop(tab) {
     if (tab) shopTab = tab;
+    if (shopTab === 'world') mapSel = null; // start on the world you are playing
     renderShop();
     $('shop').classList.add('is-open');
   }
