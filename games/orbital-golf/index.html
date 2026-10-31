@@ -287,8 +287,8 @@ window.addEventListener('error', function (e) {
 
 <script>
 (function () {
-  var DT = 1 / 120, MAXLV = 120, CHUNK = 60, BALL_R = 0.3;
-  var VERSION = '3.3', BUILD = '2026-10-31';
+  var DT = 1 / 120, MAXLV = 200, CHUNK = 60, BALL_R = 0.3;
+  var VERSION = '3.4', BUILD = '2026-10-31';
   var GREEN_R = 24; // lighter putting green around each hole (flat; finish with a chip)
   var CURV_R = 900; // virtual planet radius (m) for the horizon curvature at altitude
 
@@ -323,64 +323,76 @@ window.addEventListener('error', function (e) {
       A1: 2.5, f1: 0.040, p1: 0.3, A2: 1.2, f2: 0.103, p2: 1.1, A3: 3.5, f3: 0.021, p3: 2.0,
       hz: { water: 0.14, sand: 0.2, trees: 0.25, pole: 0.1 }, tree: 'tree', house: 'cottage',
       sky: ['#46dfa0', '#c9fbe1'], hills: ['#7fe0aa', '#4cc784', '#2fa766'], ground: ['#2fa84f', '#5bd96d'], sandColor: '#f0d48a', waterColor: '#2b8be6',
-      earn: 1, orbit: 1500, holes: [120, 420, 1100], spaceAlt: 900 },
+      earn: 1, orbit: 2100, holes: [120, 420, 1100], spaceAlt: 900 },
     { id: 'desert', name: 'Pustynia', g: 9.8, drag: 0.035, mu: 0.45, muSand: 1.7, e: 0.28, eSand: 0.08, skip: true,
       A1: 3.2, f1: 0.034, p1: 1.4, A2: 1.6, f2: 0.09, p2: 0.2, A3: 4.0, f3: 0.017, p3: 0.5,
       hz: { water: 0.08, sand: 0.4, trees: 0.25, pole: 0.1 }, tree: 'cactus', house: 'adobe',
       sky: ['#ff9a5a', '#ffe9c0'], hills: ['#f0b67a', '#dd9a58', '#c3803f'], ground: ['#d9a95a', '#f2cd7c'], sandColor: '#f7dc96', waterColor: '#1abc9c',
-      earn: 2.2, orbit: 5000, holes: [250, 900, 2800], spaceAlt: 1000 },
+      earn: 2.2, orbit: 7000, holes: [250, 900, 2800], spaceAlt: 1000 },
     { id: 'snow', name: 'Śnieżna kraina', g: 9.8, drag: 0.03, mu: 0.07, muSand: 0.9, e: 0.3, eSand: 0.1, skip: true,
       A1: 2.8, f1: 0.038, p1: 2.2, A2: 1.4, f2: 0.11, p2: 0.9, A3: 3.8, f3: 0.02, p3: 1.2,
       hz: { water: 0.14, sand: 0.2, trees: 0.3, pole: 0.1 }, tree: 'pine', house: 'cabin',
       sky: ['#6ec0ff', '#eaf6ff'], hills: ['#e4f1ff', '#bcd9f2', '#9cc3e6'], ground: ['#d3e3f2', '#ffffff'], sandColor: '#aed6f1', waterColor: '#4d9bd6',
-      earn: 4, orbit: 10000, holes: [400, 1500, 5500], spaceAlt: 1100 },
+      earn: 4, orbit: 14000, holes: [400, 1500, 5500], spaceAlt: 1100 },
     { id: 'moon', name: 'Księżyc', g: 1.62, drag: 0.0, mu: 0.35, muSand: 1.2, e: 0.34, eSand: 0.1, skip: false, airless: true, noClouds: true, noHillTrees: true, tuft: false,
       A1: 4.5, f1: 0.03, p1: 0.7, A2: 2.0, f2: 0.08, p2: 2.5, A3: 6.0, f3: 0.015, p3: 1.9,
       hz: { water: 0.14, sand: 0.2, trees: 0.25, pole: 0.1 }, tree: 'rock', house: null,
       sky: ['#04060f', '#10172c'], hills: ['#2a2f3d', '#3a4052', '#4b5266'], ground: ['#8a8d94', '#b4b7be'], sandColor: '#6b6e75', waterColor: '#161a26',
-      earn: 8, orbit: 40000, holes: [1500, 8000, 25000], spaceAlt: 0 },
+      earn: 8, orbit: 56000, holes: [1500, 8000, 25000], spaceAlt: 0 },
     { id: 'mars', name: 'Mars', g: 3.72, drag: 0.012, mu: 0.4, muSand: 1.5, e: 0.34, eSand: 0.08, skip: false, noBirds: true, noClouds: true, noHillTrees: true, tuft: 'rgba(120,48,26,0.9)', haze: 'rgba(255,175,130,',
       A1: 4.0, f1: 0.028, p1: 0.4, A2: 2.2, f2: 0.07, p2: 1.6, A3: 7.0, f3: 0.012, p3: 0.8,
       hz: { water: 0.1, sand: 0.25, trees: 0.28, pole: 0.1 }, tree: 'redrock', house: 'dome',
       sky: ['#c4663a', '#f6cba2'], hills: ['#c2693f', '#a4502d', '#85391f'], ground: ['#b9522e', '#e08a5a'], sandColor: '#7d3a24', waterColor: '#58a3b8',
-      earn: 16, orbit: 30000, holes: [1200, 7000, 20000], spaceAlt: 1400 },
+      earn: 16, orbit: 42000, holes: [1200, 7000, 20000], spaceAlt: 1400 },
     { id: 'mercury', rollDrag: 0.7, eMax: 0.55, name: 'Merkury', g: 3.9, drag: 0.0, mu: 0.4, muSand: 1.4, e: 0.3, eSand: 0.08, skip: false, noBirds: true, airless: true, noClouds: true, noHillTrees: true, tuft: false, maxT: 600,
       A1: 5.0, f1: 0.026, p1: 1.1, A2: 2.4, f2: 0.075, p2: 0.4, A3: 8.0, f3: 0.011, p3: 2.2,
       hz: { water: 0.1, sand: 0.25, trees: 0.28, pole: 0.1 }, tree: 'darkrock', house: 'dome', rockCol: '#5d5750', rockHi: '#7d766d',
       sky: ['#05060b', '#171a26'], hills: ['#4a4640', '#5e5953', '#756f67'], ground: ['#8d867c', '#b8b0a4'], sandColor: '#6f6960', waterColor: '#2a2622',
-      earn: 32, orbit: 80000, holes: [3000, 16000, 50000], spaceAlt: 0 },
+      earn: 32, orbit: 112000, holes: [3000, 16000, 50000], spaceAlt: 0 },
     { id: 'venus', rollDrag: 0.7, eMax: 0.55, name: 'Wenus', g: 5.9, drag: 0.0, mu: 0.5, muSand: 1.7, e: 0.3, eSand: 0.08, skip: false, noBirds: true, noHillTrees: true, tuft: 'rgba(120,60,20,0.9)', haze: 'rgba(255,190,90,', maxT: 900,
       A1: 5.5, f1: 0.024, p1: 0.2, A2: 2.6, f2: 0.07, p2: 1.9, A3: 9.0, f3: 0.01, p3: 0.9,
       hz: { water: 0.12, sand: 0.22, trees: 0.28, pole: 0.1 }, tree: 'darkrock', house: null, rockCol: '#6b3a1a', rockHi: '#9a5a2a',
       sky: ['#c98a2b', '#f6dc8e'], hills: ['#d49a4a', '#b87a34', '#945e25'], ground: ['#a8672b', '#d99a52'], sandColor: '#7a4a1f', waterColor: '#ff5a1f',
-      earn: 64, orbit: 160000, holes: [6000, 32000, 100000], spaceAlt: 1800 },
+      earn: 64, orbit: 224000, holes: [6000, 32000, 100000], spaceAlt: 1800 },
     { id: 'jupiter', rollDrag: 0.7, eMax: 0.55, name: 'Jowisz', g: 10.0, drag: 0.0, mu: 0.3, muSand: 1.2, e: 0.3, eSand: 0.1, skip: false, noBirds: true, noHillTrees: true, tuft: 'rgba(150,90,50,0.8)', haze: 'rgba(255,200,150,', maxT: 1200,
       A1: 6.0, f1: 0.022, p1: 0.9, A2: 3.0, f2: 0.065, p2: 2.1, A3: 10.0, f3: 0.009, p3: 1.4,
       hz: { water: 0.1, sand: 0.22, trees: 0.3, pole: 0.1 }, tree: 'cloudtower', house: null,
       sky: ['#a8602e', '#f0cf9e'], hills: ['#e8c9a5', '#cfa87c', '#b88a5d'], ground: ['#d9b38c', '#f2dcc0'], sandColor: '#a8683a', waterColor: '#7a3b1f',
-      earn: 128, orbit: 320000, holes: [12000, 64000, 200000], spaceAlt: 2200 },
+      earn: 128, orbit: 448000, holes: [12000, 64000, 200000], spaceAlt: 2200 },
     { id: 'saturn', rollDrag: 0.7, eMax: 0.55, name: 'Saturn', g: 12.3, drag: 0.0, mu: 0.25, muSand: 1.1, e: 0.3, eSand: 0.1, skip: false, noBirds: true, noHillTrees: true, tuft: 'rgba(170,140,70,0.8)', haze: 'rgba(255,230,160,', maxT: 1500, rings: true,
       A1: 6.5, f1: 0.02, p1: 0.4, A2: 3.2, f2: 0.06, p2: 1.2, A3: 11.0, f3: 0.008, p3: 2.6,
       hz: { water: 0.1, sand: 0.22, trees: 0.3, pole: 0.1 }, tree: 'crystal', house: null, crystalCol: '#e8d8a0', crystalHi: '#fff6d2',
       sky: ['#7a6a45', '#efe3bd'], hills: ['#e6d29a', '#cdb77f', '#a8945e'], ground: ['#cdb77f', '#efe0a8'], sandColor: '#9b8754', waterColor: '#6b86a8',
-      earn: 256, orbit: 640000, holes: [24000, 128000, 400000], spaceAlt: 2500 },
+      earn: 256, orbit: 896000, holes: [24000, 128000, 400000], spaceAlt: 2500 },
     { id: 'uranus', rollDrag: 0.7, eMax: 0.55, name: 'Uran', g: 21.5, drag: 0.0, mu: 0.12, muSand: 0.9, e: 0.32, eSand: 0.1, skip: false, noBirds: true, noHillTrees: true, tuft: 'rgba(60,160,170,0.8)', haze: 'rgba(170,240,245,', maxT: 1800,
       A1: 7.0, f1: 0.018, p1: 1.3, A2: 3.4, f2: 0.055, p2: 0.3, A3: 12.0, f3: 0.007, p3: 1.0,
       hz: { water: 0.1, sand: 0.2, trees: 0.3, pole: 0.1 }, tree: 'crystal', house: null, crystalCol: '#7fe3ea', crystalHi: '#d5fbff',
       sky: ['#2f9fab', '#c9f5f7'], hills: ['#a5e3e6', '#7cc9cf', '#5bb0b8'], ground: ['#7fd0d6', '#c5f1f3'], sandColor: '#4f9aa3', waterColor: '#1f6f86',
-      earn: 512, orbit: 1280000, holes: [48000, 256000, 800000], spaceAlt: 2800 },
+      earn: 512, orbit: 1792000, holes: [48000, 256000, 800000], spaceAlt: 2800 },
     { id: 'neptune', rollDrag: 0.7, eMax: 0.55, name: 'Neptun', g: 41.8, drag: 0.0, mu: 0.1, muSand: 0.8, e: 0.32, eSand: 0.1, skip: false, noBirds: true, noHillTrees: true, tuft: 'rgba(40,70,170,0.8)', haze: 'rgba(130,170,255,', maxT: 2400,
       A1: 7.5, f1: 0.016, p1: 0.6, A2: 3.6, f2: 0.05, p2: 2.4, A3: 13.0, f3: 0.006, p3: 1.7,
       hz: { water: 0.1, sand: 0.2, trees: 0.3, pole: 0.1 }, tree: 'crystal', house: null, crystalCol: '#3d5fd0', crystalHi: '#8fb0ff',
       sky: ['#0b1648', '#4a7be0'], hills: ['#4a74d6', '#2f56b3', '#1d3a8a'], ground: ['#2b4fb8', '#5d86e6'], sandColor: '#1d3a8a', waterColor: '#0a1a55',
-      earn: 1024, orbit: 2560000, holes: [96000, 512000, 1600000], spaceAlt: 3200 },
-    { id: 'neotokyo', name: 'Neo-Tokio', rollDrag: 0.7, eMax: 0.55, g: 90, drag: 0.0, mu: 0.35, muSand: 1.3, e: 0.3, eSand: 0.08, skip: false, noClouds: true, noHillTrees: true, maxT: 3000,
+      earn: 1024, orbit: 3584000, holes: [96000, 512000, 1600000], spaceAlt: 3200 },
+    { id: 'neotokyo', name: 'Neo-Tokio', portal: true, unlockBy: 10, rollDrag: 0.7, eMax: 0.55, g: 90, drag: 0.0, mu: 0.35, muSand: 1.3, e: 0.3, eSand: 0.08, skip: false, noClouds: true, noHillTrees: true, maxT: 3000,
       skyline: true, night: true, sunCore: 'rgba(255,45,110,', sunGlow: 'rgba(255,70,150,', sunRays: false, tuft: 'rgba(0,229,255,0.85)', haze: 'rgba(255,79,163,',
       A1: 3.0, f1: 0.03, p1: 0.5, A2: 1.6, f2: 0.09, p2: 1.0, A3: 6.0, f3: 0.01, p3: 0.3,
       hz: { water: 0.12, sand: 0.2, trees: 0.3, pole: 0.12 }, tree: 'torii', house: 'shop',
       sky: ['#12062e', '#ff3d8b'], hills: ['#150a33', '#1e1049', '#2b1766'], ground: ['#1a1030', '#00e5ff'], sandColor: '#c2187a', waterColor: '#0a3a5c',
-      earn: 2048, orbit: 5120000, holes: [192000, 1024000, 3200000], spaceAlt: 3500 },
+      earn: 2048, orbit: 7168000, holes: [192000, 1024000, 3200000], spaceAlt: 3500 },
+    { id: 'blocks', name: 'Blokowy Świat', portal: true, unlockBy: 10, rollDrag: 0.7, eMax: 0.55, g: 70, drag: 0.0, mu: 0.4, muSand: 1.6, e: 0.3, eSand: 0.08, skip: false, maxT: 3000,
+      pixel: true, grid: true, blockClouds: true, sunSquare: true, sunCore: 'rgba(255,238,110,', sunGlow: 'rgba(255,240,150,', sunRays: false, tuft: 'rgba(50,120,40,0.9)',
+      A1: 3.5, f1: 0.03, p1: 0.9, A2: 1.8, f2: 0.08, p2: 0.2, A3: 6.5, f3: 0.011, p3: 1.6,
+      hz: { water: 0.12, sand: 0.22, trees: 0.3, pole: 0.1 }, tree: 'blocktree', house: 'cube',
+      sky: ['#6fb1ec', '#cfeaff'], hills: ['#86c45d', '#66ad41', '#4b9030'], ground: ['#7a5230', '#5fae3a'], sandColor: '#e8dca0', waterColor: '#2f5fd0',
+      earn: 1500, orbit: 5000000, holes: [180000, 1000000, 3000000], spaceAlt: 3300 },
   ];
+  // Is a world playable? Portal worlds open with an orbit on the planet named in `unlockBy`.
+  function worldIsOpen(idx) {
+    var w = WORLDS[idx];
+    if (w.unlockBy !== undefined) return !!save.orbits[w.unlockBy];
+    return idx <= save.unlocked;
+  }
   WORLDS.forEach(function (W) {
     W.holeY = W.holes.map(function (hx) { return baseHeight(W, hx); });
     W.cache = {};
@@ -740,11 +752,12 @@ window.addEventListener('error', function (e) {
           f.skins.sel = f.skins.owned.indexOf(s.skins.sel) >= 0 ? s.skins.sel : 0;
         }
         f.unlocked = clamp(s.unlocked | 0, 0, WORLDS.length - 1);
-        f.world = clamp(s.world | 0, 0, f.unlocked);
         for (var i = 0; i < WORLDS.length; i++) {
           f.best[i] = Math.max(0, +(s.best && s.best[i]) || 0);
           f.orbits[i] = !!(s.orbits && s.orbits[i]);
         }
+        var w0 = s.world | 0;
+        f.world = (w0 >= 0 && w0 < WORLDS.length && (WORLDS[w0].unlockBy !== undefined ? f.orbits[WORLDS[w0].unlockBy] : w0 <= f.unlocked)) ? w0 : 0;
         f.shots = Math.max(0, s.shots | 0);
         f.wheelAt = +s.wheelAt || 0;
       }
@@ -1025,7 +1038,9 @@ window.addEventListener('error', function (e) {
         coins += ob; save.gems += 8;
         title = 'ORBITA! 🚀';
         lines.push('🚀 <b>Orbita osiągnięta!</b> +' + fmt(ob) + ' 🪙 +8 💎');
-        if (wi + 1 < WORLDS.length && save.unlocked < wi + 1) {
+        if (wi + 1 < WORLDS.length && WORLDS[wi + 1].portal) {
+          if (WORLDS[wi + 1].unlockBy === wi) lines.push('🌀 Otwarły się <b>portale</b> przy Słońcu (mapa światów)!');
+        } else if (wi + 1 < WORLDS.length && save.unlocked < wi + 1) {
           save.unlocked = wi + 1;
           lines.push('🌍 Odblokowano świat: <b>' + WORLDS[wi + 1].name + '</b>');
         }
@@ -1234,7 +1249,22 @@ window.addEventListener('error', function (e) {
     ctx.restore();
   }
 
+  function drawBlockBird(x, y, u, flap) { // blocky parrot
+    var up = flap > 0;
+    ctx.save(); ctx.translate(x, y);
+    ctx.fillStyle = '#b01e1e'; ctx.fillRect(-1.35 * u, -0.1 * u, 0.6 * u, 0.32 * u);
+    ctx.fillStyle = '#2a6fdb'; ctx.fillRect(-0.45 * u, up ? -1.15 * u : 0.35 * u, 0.95 * u, 0.6 * u);
+    ctx.fillStyle = '#d62828'; ctx.fillRect(-0.8 * u, -0.35 * u, 1.6 * u, 0.9 * u);
+    ctx.fillStyle = '#f2c14e'; ctx.fillRect(-0.55 * u, 0.1 * u, 1.1 * u, 0.25 * u);
+    ctx.fillStyle = '#d62828'; ctx.fillRect(0.55 * u, -0.85 * u, 0.7 * u, 0.7 * u);
+    ctx.fillStyle = '#ffb703'; ctx.fillRect(1.2 * u, -0.6 * u, 0.42 * u, 0.3 * u);
+    ctx.fillStyle = '#fff'; ctx.fillRect(0.85 * u, -0.7 * u, 0.24 * u, 0.24 * u);
+    ctx.fillStyle = '#111'; ctx.fillRect(0.97 * u, -0.67 * u, 0.12 * u, 0.16 * u);
+    ctx.restore();
+  }
+
   function drawBigBird(x, y, u, flap) {
+    if (W.id === 'blocks') { drawBlockBird(x, y, u, flap); return; }
     if (W.id === 'neotokyo') { drawDrone(x, y, u, flap); return; }
     var w = flap * 0.9; // -0.9 .. 0.9: wings down .. up
     ctx.save(); ctx.translate(x, y); ctx.lineJoin = 'round';
@@ -1284,6 +1314,15 @@ window.addEventListener('error', function (e) {
         ctx.beginPath(); ctx.moveTo(sx - wd, y1); ctx.lineTo(sx + wd, y1); ctx.lineTo(sx, y1 - ph * 0.42); ctx.closePath(); ctx.fill();
         ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(sx - wd * 0.4, y1 - ph * 0.26); ctx.lineTo(sx + wd * 0.4, y1 - ph * 0.26); ctx.lineTo(sx, y1 - ph * 0.42); ctx.closePath(); ctx.fill();
       }
+    } else if (kind === 'blocktree') { // square oak: trunk column + a block of leaves
+      var tr2 = Math.max(2, pw * 0.3);
+      ctx.fillStyle = '#6b4a2b'; ctx.fillRect(sx - tr2 / 2, sy - ph * 0.58, tr2, ph * 0.58);
+      ctx.fillStyle = '#54391f'; ctx.fillRect(sx - tr2 / 2, sy - ph * 0.58, Math.max(1, tr2 * 0.25), ph * 0.58);
+      var lw = pw * 1.05, lh = ph * 0.52, lx = sx - lw / 2, ly = sy - ph;
+      for (var lr = 0; lr < 3; lr++) for (var lc = 0; lc < 4; lc++) {
+        ctx.fillStyle = (lr + lc) % 2 ? '#2f9a2f' : '#267a26';
+        ctx.fillRect(lx + lc * lw / 4, ly + lr * lh / 3, lw / 4 + 0.5, lh / 3 + 0.5);
+      }
     } else if (kind === 'torii') {
       var tw = pw * 1.1, th = ph, pil = Math.max(2, pw * 0.14);
       ctx.fillStyle = 'rgba(255,60,100,0.28)'; ctx.fillRect(sx - tw * 0.5 - pil, sy - th - pil, tw + pil * 2, th + pil); // neon glow
@@ -1328,6 +1367,16 @@ window.addEventListener('error', function (e) {
       ctx.strokeStyle = '#eef3f6'; ctx.lineWidth = Math.max(1.5, 0.12 * s); ctx.stroke();
       ctx.fillStyle = '#7e8a95'; ctx.fillRect(sx - 0.6 * s, sy - h * 0.45, 1.2 * s, h * 0.45);
       ctx.fillStyle = '#e8453c'; ctx.fillRect(sx + w * 0.3, sy - h * 0.45 - 1.4 * s, 0.14 * s, 1.4 * s);
+      return;
+    }
+    if (kind === 'cube') { // block-style wooden house with a stone base
+      ctx.fillStyle = '#b5875a'; ctx.fillRect(sx - w / 2, sy - h * 1.05, w, h * 1.05);
+      ctx.fillStyle = 'rgba(0,0,0,0.14)';
+      for (var cq = 1; cq < 5; cq++) ctx.fillRect(sx - w / 2, sy - h * 1.05 + cq * h * 0.21, w, Math.max(1, 0.08 * s));
+      ctx.fillStyle = '#7d7d7d'; ctx.fillRect(sx - w / 2, sy - 0.8 * s, w, 0.8 * s);
+      ctx.fillStyle = '#6b4a2b'; ctx.fillRect(sx - w / 2 - 0.4 * s, sy - h * 1.05 - 0.9 * s, w + 0.8 * s, 0.9 * s);
+      ctx.fillStyle = '#9fd8ff'; ctx.fillRect(sx - w / 2 + 0.8 * s, sy - h * 0.75, 1.3 * s, 1.3 * s); ctx.fillRect(sx + w / 2 - 2.1 * s, sy - h * 0.75, 1.3 * s, 1.3 * s);
+      ctx.fillStyle = '#5a3d22'; ctx.fillRect(sx - 0.7 * s, sy - 2.3 * s, 1.4 * s, 2.3 * s);
       return;
     }
     if (kind === 'shop') { // Neo-Tokio: a small neon-lit shop with a glowing sign
@@ -1485,7 +1534,7 @@ window.addEventListener('error', function (e) {
       var sg = ctx.createRadialGradient(sxn, syn, sr * 0.3, sxn, syn, sr * 3);
       sg.addColorStop(0, (W.sunGlow || 'rgba(255,240,150,') + (0.9 * sunA) + ')'); sg.addColorStop(1, (W.sunGlow || 'rgba(255,240,150,') + '0)');
       ctx.fillStyle = sg; ctx.fillRect(sxn - sr * 3, syn - sr * 3, sr * 6, sr * 6);
-      ctx.fillStyle = (W.sunCore || 'rgba(255,225,70,') + sunA + ')'; ctx.beginPath(); ctx.arc(sxn, syn, sr, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = (W.sunCore || 'rgba(255,225,70,') + sunA + ')'; if (W.sunSquare) ctx.fillRect(sxn - sr, syn - sr, sr * 2, sr * 2); else { ctx.beginPath(); ctx.arc(sxn, syn, sr, 0, Math.PI * 2); ctx.fill(); }
       ctx.strokeStyle = 'rgba(255,225,70,' + (0.8 * sunA) + ')'; ctx.lineWidth = 3;
       for (i = 0; W.sunRays !== false && i < 12; i++) {
         var ra = i * Math.PI / 6 + clock * 0.2;
@@ -1507,7 +1556,8 @@ window.addEventListener('error', function (e) {
         var span = VW * 1.7;
         var cx = (((i * 0.37 * span - bgX * BG_PX * 0.12 + clock * 6) % span) + span) % span - VW * 0.3;
         var cy = VH * (0.08 + 0.06 * (i % 4));
-        ctx.beginPath(); ctx.ellipse(cx, cy, 34, 11, 0, 0, Math.PI * 2); ctx.ellipse(cx + 22, cy + 3, 26, 9, 0, 0, Math.PI * 2); ctx.ellipse(cx - 20, cy + 4, 22, 8, 0, 0, Math.PI * 2); ctx.fill();
+        if (W.blockClouds) { ctx.fillRect(cx - 34, cy - 6, 76, 16); ctx.fillRect(cx - 12, cy - 18, 40, 14); ctx.fillRect(cx - 48, cy + 4, 40, 10); }
+        else { ctx.beginPath(); ctx.ellipse(cx, cy, 34, 11, 0, 0, Math.PI * 2); ctx.ellipse(cx + 22, cy + 3, 26, 9, 0, 0, Math.PI * 2); ctx.ellipse(cx - 20, cy + 4, 22, 8, 0, 0, Math.PI * 2); ctx.fill(); }
       }
       // distant flock of birds
       var fa = 1 - a;
@@ -1529,9 +1579,11 @@ window.addEventListener('error', function (e) {
         ctx.fillStyle = W.hills[layer];
         ctx.beginPath(); ctx.moveTo(0, VH);
         var ys = [];
+        var pixB = W.pixel ? 16 + layer * 6 : 0; // blocky worlds: hills move in whole blocks
         for (px = 0; px <= VW + 6; px += 6) {
-          var u = (px + scroll) / 140;
+          var u = (pixB ? Math.floor((px + scroll) / pixB) * pixB : px + scroll) / 140;
           var yy = groundScreen - lift - amp * (0.6 * Math.sin(u + layer * 2) + 0.4 * Math.sin(u * 2.3 + layer));
+          if (pixB) { yy = Math.round(yy / pixB) * pixB; if (ys.length && ys[ys.length - 1] !== yy) ctx.lineTo(px, ys[ys.length - 1]); }
           ys.push(yy); ctx.lineTo(px, yy);
         }
         ctx.lineTo(VW + 6, VH); ctx.closePath(); ctx.fill();
@@ -1546,7 +1598,8 @@ window.addEventListener('error', function (e) {
             var tr = (7 + h1 * 7) * (VH / 700);
             ctx.fillStyle = layer === 0 ? 'rgba(40,120,80,0.55)' : 'rgba(25,100,60,0.75)';
             ctx.fillRect(tp - 1.5, ys[idx] - tr * 0.4, 3, tr * 0.5);
-            ctx.beginPath(); ctx.arc(tp, ys[idx] - tr, tr * 0.7, 0, Math.PI * 2); ctx.fill();
+            if (W.pixel) ctx.fillRect(tp - tr * 0.6, ys[idx] - tr * 1.6, tr * 1.2, tr * 1.2);
+            else { ctx.beginPath(); ctx.arc(tp, ys[idx] - tr, tr * 0.7, 0, Math.PI * 2); ctx.fill(); }
           }
         }
       }
@@ -1599,10 +1652,17 @@ window.addEventListener('error', function (e) {
     // mowing stripes
     ctx.save(); ctx.clip();
     var sw = 3, sj0 = Math.floor(x0 / sw);
-    for (var sj = sj0; sw * ppm >= 2 && sj * sw < x1; sj++) { // (skipped when stripes would be sub-pixel: that was tens of thousands of fillRects)
+    for (var sj = sj0; sw * ppm >= 2 && !W.grid && sj * sw < x1; sj++) { // (skipped when stripes would be sub-pixel: that was tens of thousands of fillRects)
       if (sj % 2) continue;
       ctx.fillStyle = 'rgba(255,255,255,0.07)';
       ctx.fillRect(sx(sj * sw), 0, sw * ppm, VH);
+    }
+    if (W.grid && ppm >= 6) { // block world: a 2 m grid of dark lines makes the ground look like cubes
+      ctx.strokeStyle = 'rgba(0,0,0,0.17)'; ctx.lineWidth = 1; ctx.beginPath();
+      for (var gxl = Math.floor(x0 / 2) * 2; gxl < x1; gxl += 2) { ctx.moveTo(sx(gxl), 0); ctx.lineTo(sx(gxl), VH); }
+      var gyTop = cam.y + baseY / ppm, gyBot = cam.y - (VH - baseY) / ppm;
+      for (var gyl = Math.floor(gyBot / 2) * 2; gyl < gyTop; gyl += 2) { var gsy = baseY - (gyl - cam.y) * ppm; ctx.moveTo(0, gsy); ctx.lineTo(VW, gsy); }
+      ctx.stroke();
     }
     // putting greens: the grass itself is lighter around each hole, fading out softly
     for (i = 0; i < W.holes.length; i++) {
@@ -1903,7 +1963,7 @@ window.addEventListener('error', function (e) {
   // other planets are single worlds. Locked worlds are grey. Clicking the Sun shows portals to
   // worlds that don't exist yet. Tapping a world selects it; the card under the map starts it.
   var mapSel = null; // world index, or -1 for the Sun
-  var WORLD_ICONS = ['🌳', '🏜️', '❄️', '🌕', '🔴', '☿️', '🌋', '🟠', '🪐', '🧊', '🔵', '🌃'];
+  var WORLD_ICONS = ['🌳', '🏜️', '❄️', '🌕', '🔴', '☿️', '🌋', '🟠', '🪐', '🧊', '🔵', '🌃', '🧱'];
   var SVGNS = 'http://www.w3.org/2000/svg';
   function sv(tag, attrs, parent) {
     var n = document.createElementNS(SVGNS, tag);
@@ -1939,7 +1999,7 @@ window.addEventListener('error', function (e) {
 
     function select(idx) { mapSel = idx; renderShop(); }
     var GREY = '#6c7480';
-    function worldOpen(idx) { return idx <= save.unlocked; }
+    function worldOpen(idx) { return worldIsOpen(idx); }
 
     // the Sun
     var sunSel = mapSel === -1;
@@ -1988,18 +2048,19 @@ window.addEventListener('error', function (e) {
       box.appendChild(el('div', 'ico', '☀️'));
       var inf = el('div', 'info');
       inf.appendChild(el('b', '', 'Słońce — portale'));
-      inf.appendChild(el('span', '', 'Portale prowadzą do kolejnych światów. Pierwszy — Neo-Tokio — otwiera się po orbicie na Neptunie. Pozostałe już wkrótce!'));
+      inf.appendChild(el('span', '', 'Portale prowadzą do kolejnych światów: Neo-Tokio i Blokowy Świat otwierają się po orbicie na Neptunie. Kolejne już wkrótce!'));
       var pr = el('div', 'portals');
-      var neoIdx = -1;
-      for (var wi2 = 0; wi2 < WORLDS.length; wi2++) if (WORLDS[wi2].id === 'neotokyo') neoIdx = wi2;
-      for (var q = 1; q <= 3; q++) {
-        var pc = el('div', 'portal'), live = q === 1 && neoIdx >= 0;
+      var portalWorlds = [];
+      for (var wi2 = 0; wi2 < WORLDS.length; wi2++) if (WORLDS[wi2].portal) portalWorlds.push(wi2);
+      for (var q = 0; q < 3; q++) {
+        var pc = el('div', 'portal'), pidx = portalWorlds[q];
         pc.appendChild(el('span', 'swirl', '🌀'));
-        if (live) {
-          pc.className = 'portal is-live' + (neoIdx <= save.unlocked ? '' : ' is-locked');
-          pc.appendChild(document.createTextNode(WORLDS[neoIdx].name + (neoIdx <= save.unlocked ? '' : ' · 🔒')));
-          (function (idx) { pc.addEventListener('click', function () { select(idx); }); })(neoIdx);
-        } else pc.appendChild(document.createTextNode('Portal ' + q + ' · wkrótce'));
+        if (pidx !== undefined) {
+          var pOpen = worldIsOpen(pidx);
+          pc.className = 'portal is-live' + (pOpen ? '' : ' is-locked');
+          pc.appendChild(document.createTextNode(WORLDS[pidx].name + (pOpen ? '' : ' · 🔒')));
+          (function (idx) { pc.addEventListener('click', function () { select(idx); }); })(pidx);
+        } else pc.appendChild(document.createTextNode('Portal ' + (q + 1) + ' · wkrótce'));
         pr.appendChild(pc);
       }
       inf.appendChild(pr);
@@ -2007,11 +2068,11 @@ window.addEventListener('error', function (e) {
       body.appendChild(box);
       return;
     }
-    var w = WORLDS[mapSel], open2 = mapSel <= save.unlocked, cur = save.world === mapSel, btn;
+    var w = WORLDS[mapSel], open2 = worldIsOpen(mapSel), cur = save.world === mapSel, btn;
     if (open2) btn = buyBtn(cur ? 'Tu grasz' : 'Graj tutaj', !cur, function () { setWorld(mapSel); $('shop').classList.remove('is-open'); });
     else btn = buyBtn('🔒', false, null);
     var desc = open2 ? 'Orbita: ' + fmt(w.orbit) + ' m · rekord ' + fmt(save.best[mapSel]) + ' m · zarobki ×' + w.earn
-      : 'Osiągnij orbitę w poprzednim świecie (' + WORLDS[mapSel - 1].name + ')' + (w.id === 'neotokyo' ? ' — portal ze Słońca' : '');
+      : (w.portal ? 'Osiągnij orbitę na planecie ' + WORLDS[w.unlockBy].name + ' — otworzy się portal ze Słońca' : 'Osiągnij orbitę w poprzednim świecie (' + WORLDS[mapSel - 1].name + ')');
     body.appendChild(rowFor(WORLD_ICONS[mapSel], w.name, desc, btn, cur));
   }
 
@@ -2205,7 +2266,9 @@ window.addEventListener('error', function (e) {
     save.up.str = adminNum('a-str', 0, MAXLV); save.up.spd = adminNum('a-spd', 0, MAXLV); save.up.bnc = adminNum('a-bnc', 0, MAXLV);
     save.shots = adminNum('a-shots', 0, 1e9);
     save.unlocked = adminNum('a-unlocked', 0, WORLDS.length - 1);
-    save.world = Math.min(adminNum('a-world', 0, WORLDS.length - 1), save.unlocked);
+    var aw = adminNum('a-world', 0, WORLDS.length - 1);
+    if (!worldIsOpen(aw)) { if (WORLDS[aw].unlockBy !== undefined) save.orbits[WORLDS[aw].unlockBy] = true; else save.unlocked = Math.max(save.unlocked, aw); }
+    save.world = aw;
     writeSave(); refreshMenu();
   }
   adminSetup();
