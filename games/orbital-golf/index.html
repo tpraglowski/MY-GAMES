@@ -97,7 +97,8 @@
   .u-btn.is-ready { background: #35c76b; color: #05260f; animation: pulse 1.1s ease-in-out infinite; }
   @keyframes pulse { 50% { transform: scale(1.04); } }
 
-  #bottom-left { position: absolute; left: 0.5rem; bottom: 0.5rem; }
+  #bottom-left { position: absolute; left: 0.5rem; bottom: 0.5rem; display: flex; gap: 0.5rem; align-items: flex-end; }
+  .sq-btn.is-on { background: #9be564; }
   .club-btn { display: flex; flex-direction: column; align-items: center; gap: 0.1rem; width: 74px; padding: 0.3rem 0.2rem; border-radius: 14px; border: 3px solid #fff; background: #e9f7ff; color: #3b4a5a; font-weight: 900; font-size: 0.66rem; cursor: pointer; box-shadow: 0 3px 0 rgba(0,0,0,0.25); text-shadow: none; font-family: inherit; }
   .club-btn span { font-size: 1.7rem; line-height: 1; }
   #bottom-right { position: absolute; right: 0.5rem; bottom: 0.5rem; display: flex; gap: 0.4rem; }
@@ -249,7 +250,7 @@ window.addEventListener('error', function (e) {
         <div id="goal-label"></div>
       </div>
       <div id="upg-panel"></div>
-      <div id="bottom-left"><button class="club-btn" id="b-club" type="button"><span>🏌️</span>Szatnia</button></div>
+      <div id="bottom-left"><button class="club-btn" id="b-club" type="button"><span>🏌️</span>Szatnia</button><button class="sq-btn" id="b-quick" type="button" aria-label="Szybkie strzały">⚡<small>Szybkie</small></button></div>
       <div id="bottom-right">
         <button class="sq-btn" id="b-gift" type="button">🎁<small id="gift-timer"></small></button>
         <button class="sq-btn" id="b-star" type="button">🌍</button>
@@ -288,7 +289,7 @@ window.addEventListener('error', function (e) {
 <script>
 (function () {
   var DT = 1 / 120, MAXLV = 200, CHUNK = 60, BALL_R = 0.3;
-  var VERSION = '3.6', BUILD = '2026-11-04';
+  var VERSION = '3.7', BUILD = '2026-11-04';
   var GREEN_R = 24; // lighter putting green around each hole (flat; finish with a chip)
   var CURV_R = 900; // virtual planet radius (m) for the horizon curvature at altitude
 
@@ -374,7 +375,7 @@ window.addEventListener('error', function (e) {
       hz: { water: 0.1, sand: 0.2, trees: 0.3, pole: 0.1 }, tree: 'crystal', house: null, crystalCol: '#3d5fd0', crystalHi: '#8fb0ff',
       sky: ['#0b1648', '#4a7be0'], hills: ['#4a74d6', '#2f56b3', '#1d3a8a'], ground: ['#2b4fb8', '#5d86e6'], sandColor: '#1d3a8a', waterColor: '#0a1a55',
       earn: 1024, orbit: 3584000, holes: [96000, 512000, 1600000], spaceAlt: 3200 },
-    { id: 'neotokyo', name: 'Neo-Tokio', portal: true, unlockBy: 10, rollDrag: 0.7, eMax: 0.55, g: 90, drag: 0.0, mu: 0.35, muSand: 1.3, e: 0.3, eSand: 0.08, skip: false, noClouds: true, noHillTrees: true, maxT: 3000,
+    { id: 'neotokyo', name: 'Neo-Tokio', portal: true, unlockBy: 10, flyer: 'drone', birdLine: '🤖 Trafione drony: ', birdBanner: 'Dron! 🤖', rollDrag: 0.7, eMax: 0.55, g: 90, drag: 0.0, mu: 0.35, muSand: 1.3, e: 0.3, eSand: 0.08, skip: false, noClouds: true, noHillTrees: true, maxT: 3000,
       skyline: true, night: true, sunCore: 'rgba(255,45,110,', sunGlow: 'rgba(255,70,150,', sunRays: false, tuft: 'rgba(0,229,255,0.85)', haze: 'rgba(255,79,163,',
       A1: 3.0, f1: 0.03, p1: 0.5, A2: 1.6, f2: 0.09, p2: 1.0, A3: 6.0, f3: 0.01, p3: 0.3,
       hz: { water: 0.12, sand: 0.2, trees: 0.3, pole: 0.12 }, tree: 'torii', house: 'shop',
@@ -386,6 +387,25 @@ window.addEventListener('error', function (e) {
       hz: { water: 0.12, sand: 0.22, trees: 0.3, pole: 0.1 }, tree: 'blocktree', house: 'cube',
       sky: ['#6fb1ec', '#cfeaff'], hills: ['#86c45d', '#66ad41', '#4b9030'], ground: ['#7a5230', '#5fae3a'], sandColor: '#e8dca0', waterColor: '#2f5fd0',
       earn: 1500, orbit: 5000000, holes: [180000, 1000000, 3000000], spaceAlt: 3300 },
+    { id: 'candy', name: 'Cukrowa Kraina', portal: true, unlockBy: 11, rollDrag: 0.7, eMax: 0.55, g: 60, drag: 0.0, mu: 0.3, muSand: 1.4, e: 0.3, eSand: 0.08, skip: false, noBirds: true, maxT: 3600,
+      cloudCol: 'rgba(255,225,245,', hillTreeCol: ['rgba(255,110,180,0.6)', 'rgba(180,120,255,0.75)'], tuft: 'rgba(255,90,160,0.9)', haze: 'rgba(255,170,220,',
+      A1: 3.5, f1: 0.03, p1: 0.2, A2: 1.8, f2: 0.085, p2: 1.1, A3: 6.5, f3: 0.01, p3: 2.2,
+      hz: { water: 0.12, sand: 0.2, trees: 0.3, pole: 0.1 }, tree: 'candycane', house: 'gingerbread',
+      sky: ['#ff9fd8', '#fff0c8'], hills: ['#ffb6e1', '#f59ad0', '#d77fc0'], ground: ['#6b3a22', '#ff6fb0'], sandColor: '#fff3b0', waterColor: '#4a2410', splashCol: '#7b4a2e', liquidMsg: ' · wpadła do czekolady 🍫',
+      earn: 3000, orbit: 20000000, holes: [800000, 4000000, 12500000], spaceAlt: 3600 },
+    { id: 'atlantis', name: 'Atlantyda', portal: true, unlockBy: 11, rollDrag: 0.7, eMax: 0.55, g: 70, drag: 0.0, mu: 0.4, muSand: 1.6, e: 0.3, eSand: 0.08, skip: false, maxT: 3600,
+      flyer: 'fish', birdLine: '🐟 Trafione ryby: ', birdBanner: 'Ryba! 🐟', noSun: true, noClouds: true, bubbles: true, rays: true, hillTreeCol: ['rgba(255,110,140,0.55)', 'rgba(255,160,90,0.7)'], tuft: 'rgba(40,170,120,0.9)', haze: 'rgba(90,210,255,',
+      A1: 4.0, f1: 0.028, p1: 0.7, A2: 2.0, f2: 0.08, p2: 0.3, A3: 7.0, f3: 0.011, p3: 1.4,
+      hz: { water: 0.12, sand: 0.22, trees: 0.3, pole: 0.1 }, tree: 'coral', house: 'temple',
+      sky: ['#06306b', '#2aa8c8'], hills: ['#1d6fa8', '#165690', '#0f3d6e'], ground: ['#cdb878', '#f3e3a6'], sandColor: '#b89a52', waterColor: '#041a44', splashCol: '#bfefff', liquidMsg: ' · wpadła w głębinę 🌊',
+      earn: 4000, orbit: 20000000, holes: [800000, 4000000, 12500000], spaceAlt: 3600 },
+    { id: 'inferno', name: 'Wulkaniczne Piekło', portal: true, unlockBy: 11, rollDrag: 0.7, eMax: 0.55, g: 100, drag: 0.0, mu: 0.45, muSand: 1.7, e: 0.3, eSand: 0.08, skip: false, maxT: 3600,
+      flyer: 'bat', birdLine: '🦇 Trafione nietoperze: ', birdBanner: 'Nietoperz! 🦇', noClouds: true, embers: true, hillTreeCol: ['rgba(255,110,20,0.5)', 'rgba(255,170,40,0.7)'], tuft: 'rgba(255,120,30,0.9)', haze: 'rgba(255,90,30,',
+      sunCore: 'rgba(255,50,20,', sunGlow: 'rgba(255,80,30,', sunRays: false, night: true,
+      A1: 4.5, f1: 0.027, p1: 1.0, A2: 2.2, f2: 0.075, p2: 0.8, A3: 7.5, f3: 0.01, p3: 0.5,
+      hz: { water: 0.14, sand: 0.2, trees: 0.3, pole: 0.1 }, tree: 'spike', house: null,
+      sky: ['#1a0404', '#ff5a1c'], hills: ['#3a0e0e', '#521515', '#701d1d'], ground: ['#241313', '#ff5a14'], sandColor: '#4a3a3a', waterColor: '#ff4d00', splashCol: '#ffb347', liquidMsg: ' · wpadła do lawy 🔥',
+      earn: 5000, orbit: 20000000, holes: [800000, 4000000, 12500000], spaceAlt: 3600 },
   ];
   // Is a world playable? Portal worlds open with an orbit on the planet named in `unlockBy`.
   function worldIsOpen(idx) {
@@ -558,7 +578,7 @@ window.addEventListener('error', function (e) {
         if (b.destroyed[f.id]) continue;
         var fgy = gyOf(W, f), top = fgy + f.h, hw = f.w / 2 + BALL_R;
         if (b.x > f.x - hw && b.x < f.x + hw && b.y < top && b.y > fgy - 1) {
-          if (b.fire && f.type === 'tree') { // a burning ball goes straight through
+          if (b.fire && (f.type === 'tree' || f.type === 'pole')) { // a burning ball goes straight through
             b.destroyed[f.id] = true; b.trees++; b.crash = { x: f.x, y: fgy + f.h * 0.5 };
             continue;
           }
@@ -835,6 +855,9 @@ window.addEventListener('error', function (e) {
   var W = WORLDS[0], P = null, ball = makeBall();
   var cam = { x: -6, y: 0, ppm: 12, alt: 0, curve: 0 };
   var swingT = 0, theta = ANG_CENTER, lastZone = ZONES[0], golfSwing = 1, acc = 0, trail = [], trailT = 0;
+  var quickShots = false; // ⚡ button: instant swing, faster flights, auto-continue after ordinary shots
+  try { quickShots = localStorage.getItem('mg_orbgolf_quick') === '1'; } catch (eQ) { /* ignore */ }
+  var quickToken = 0;
   var shotEvent = null; // 'super' | 'jackpot' | 'gems' | null — rolled when the ball leaves the tee
   var swingClock = 0, swingDur = 0.85, swingPerfect = false, swingTheta = ANG_CENTER, timeScale = 1;
   var readyAt = 0, clock = 0, particles = [], goalPulse = 0;
@@ -854,7 +877,10 @@ window.addEventListener('error', function (e) {
   function nextGoalText() {
     var wi = save.world;
     if (!save.orbits[wi]) {
-      var nxt = wi + 1 < WORLDS.length ? ' i odblokuj: <b>' + WORLDS[wi + 1].name + '</b>' : '';
+      var un = [];
+      if (wi + 1 < WORLDS.length && !WORLDS[wi + 1].portal) un.push(WORLDS[wi + 1].name);
+      WORLDS.forEach(function (pw) { if (pw.portal && pw.unlockBy === wi) un.push(pw.name); }); // portal worlds opened by this orbit
+      var nxt = un.length ? ' i odblokuj: <b>' + un.join(', ') + '</b>' : '';
       return 'Dotrzyj do <b>' + fmt(W.orbit) + ' m</b>' + nxt + '!';
     }
     return 'Orbita osiągnięta! Bij rekord: <b>' + fmt(save.best[wi]) + ' m</b>';
@@ -880,7 +906,7 @@ window.addEventListener('error', function (e) {
     ball = makeBall();
     P = statsFor(W, save.up, curBall());
     state = 'ready';
-    shotEvent = null;
+    shotEvent = null; quickToken++;
     swingT = 0; theta = ANG_CENTER; golfSwing = 1; acc = 0; trail = []; trailT = 0; particles = []; swingClock = 0; timeScale = 1;
     readyAt = performance.now() + 450;
     cam.alt = 0; cam.curve = 0;
@@ -907,7 +933,7 @@ window.addEventListener('error', function (e) {
     lastZone = zoneFor(theta);
     swingTheta = theta;
     swingPerfect = lastZone === ZONES[0];
-    swingDur = swingPerfect ? 2.1 : 0.85;
+    swingDur = quickShots ? 0.3 : (swingPerfect ? 2.1 : 0.85);
     swingClock = 0;
     golfSwing = 0;
     state = 'swing';
@@ -1051,7 +1077,7 @@ window.addEventListener('error', function (e) {
     var lines = [];
     var title = fmt(dist) + ' m';
 
-    lines.push('Dystans: <b>' + fmt(dist) + ' m</b>' + (res === 'water' ? ' · wpadła do wody 💦' : ''));
+    lines.push('Dystans: <b>' + fmt(dist) + ' m</b>' + (res === 'water' ? (W.liquidMsg || ' · wpadła do wody 💦') : ''));
     if (shotEvent === 'jackpot') coins *= 5;
     lines.push('Monety: <b>+' + fmt(coins) + ' 🪙</b>' + (lastZone.coin > 1.2 ? ' (idealny kąt ×1,3)' : ''));
     if (shotEvent === 'super') lines.push('🍀 <b>Szczęśliwy strzał!</b> Poleciało około ×3 dalej (rzadkie zdarzenie!).');
@@ -1061,9 +1087,9 @@ window.addEventListener('error', function (e) {
     if (ball.birds > 0) {
       var bb = Math.round(40 * W.earn * ball.birds);
       coins += bb;
-      lines.push((W.id === 'neotokyo' ? '🤖 Trafione drony: <b>' : '🐦 Trafione ptaki: <b>') + ball.birds + '</b> · <b>+' + fmt(bb) + ' 🪙</b>');
+      lines.push((W.birdLine || '🐦 Trafione ptaki: ') + '<b>' + ball.birds + '</b> · <b>+' + fmt(bb) + ' 🪙</b>');
     }
-    if (ball.trees > 0) lines.push('🔥 Zniszczone drzewa: <b>' + ball.trees + '</b>');
+    if (ball.trees > 0) lines.push('🔥 Zniszczone przeszkody: <b>' + ball.trees + '</b>');
     if (res === 'hole') {
       var bonus = Math.round(HOLE_BONUS[ball.holeIdx] * W.earn);
       coins += bonus;
@@ -1081,8 +1107,10 @@ window.addEventListener('error', function (e) {
         coins += ob; save.gems += 8;
         title = 'ORBITA! 🚀';
         lines.push('🚀 <b>Orbita osiągnięta!</b> +' + fmt(ob) + ' 🪙 +8 💎');
+        var opened = WORLDS.filter(function (pw) { return pw.portal && pw.unlockBy === wi; });
+        if (opened.length) lines.push('🌀 Otwarły się portale przy Słońcu: <b>' + opened.map(function (pw) { return pw.name; }).join(', ') + '</b>!');
         if (wi + 1 < WORLDS.length && WORLDS[wi + 1].portal) {
-          if (WORLDS[wi + 1].unlockBy === wi) lines.push('🌀 Otwarły się <b>portale</b> przy Słońcu (mapa światów)!');
+          /* portal worlds open through the Sun, not through the list order */
         } else if (wi + 1 < WORLDS.length && save.unlocked < wi + 1) {
           save.unlocked = wi + 1;
           lines.push('🌍 Odblokowano świat: <b>' + WORLDS[wi + 1].name + '</b>');
@@ -1104,6 +1132,14 @@ window.addEventListener('error', function (e) {
     $('r-title').textContent = title;
     var onGreen = res === 'stop' && greenIdx(ball.x) >= 0;
     if (onGreen) lines.push('⛳ Piłka na zielonym! Możesz zrobić <b>dobitkę</b>.');
+    var special = res === 'hole' || dist >= W.orbit || !!shotEvent || onGreen;
+    if (quickShots && !special) { // quick mode: a short toast, then straight to the next shot
+      offerPutt(false);
+      banner(fmt(dist) + ' m · +' + fmt(coins) + ' 🪙' + (lines.join('').indexOf('rekord') >= 0 ? ' · 🏆 rekord!' : ''));
+      var qTok = ++quickToken;
+      setTimeout(function () { if (state === 'result' && qTok === quickToken && !$('result').classList.contains('is-visible')) resetShot(); }, 1100);
+      return;
+    }
     offerPutt(onGreen);
     $('r-lines').innerHTML = lines.join('<br>');
     $('result').classList.add('is-visible');
@@ -1113,7 +1149,7 @@ window.addEventListener('error', function (e) {
     for (var i = 0; i < 14; i++) {
       var a = Math.PI * (0.25 + 0.5 * Math.random());
       var sp = 3 + Math.random() * clamp(v * 0.25, 2, 9);
-      particles.push({ x: x, y: y, vx: Math.cos(a) * sp * (Math.random() < 0.5 ? -1 : 1) * 0.6, vy: Math.sin(a) * sp, t: 0, life: 0.9, col: '#d9f1ff', r: 0.25, g: 12 });
+      particles.push({ x: x, y: y, vx: Math.cos(a) * sp * (Math.random() < 0.5 ? -1 : 1) * 0.6, vy: Math.sin(a) * sp, t: 0, life: 0.9, col: W.splashCol || '#d9f1ff', r: 0.25, g: 12 });
     }
   }
   function spawnFeathers(x, y) {
@@ -1183,7 +1219,7 @@ window.addEventListener('error', function (e) {
       else if (balt > 5) tgt = 1.5;
       else tgt = clamp(bspd / 30, 1, 3);
       if (W.maxT && tgt < timeScale) timeScale = tgt; else timeScale += (tgt - timeScale) * Math.min(1, dt * (W.maxT ? 8 : 3));
-      var scale = timeScale;
+      var scale = timeScale * (quickShots ? 2 : 1);
       acc += dt * scale;
       var guard = 0, res = null;
       while (acc >= DT && !res && guard++ < 500) {
@@ -1197,9 +1233,9 @@ window.addEventListener('error', function (e) {
         trailT += stp;
         if (trailT > 0.05 * scale) { trailT = 0; trail.push({ x: ball.x, y: ball.y }); if (trail.length > 90) trail.shift(); }
         if (ball.splash) { spawnSplash(ball.splash.x, ball.splash.y, ball.splash.v); ball.splash = null; }
-        if (ball.feather) { spawnFeathers(ball.feather.x, ball.feather.y); ball.feather = null; banner(W.id === 'neotokyo' ? 'Dron! 🤖' : 'Ptak! 🐦'); }
+        if (ball.feather) { spawnFeathers(ball.feather.x, ball.feather.y); ball.feather = null; banner(W.birdBanner || 'Ptak! 🐦'); }
       }
-      if (ball.crash) { spawnCrash(ball.crash); ball.crash = null; banner('Drzewo zniszczone! 💥'); }
+      if (ball.crash) { spawnCrash(ball.crash); ball.crash = null; banner('Przeszkoda zniszczona! 💥'); }
       if (ball.fire) spawnFire();
       $('dist-big').textContent = fmt(Math.max(0, ball.x)) + ' m';
       setGoalBar(ball.x);
@@ -1215,7 +1251,7 @@ window.addEventListener('error', function (e) {
     cam.alt += (alt - cam.alt) * Math.min(1, dt * 6);
     if (state === 'swing') {
       var base = readyPpm(), z = 1, imp = swingDur * 0.8;
-      if (swingPerfect) {
+      if (swingPerfect && !quickShots) {
         var zo = 0.45;
         z = swingClock < zo ? 1 - 0.45 * smooth(swingClock / zo) : 0.55 + 1.3 * smooth((swingClock - zo) / (imp - zo));
       } else z = 1 + 0.1 * smooth(swingClock / imp);
@@ -1296,6 +1332,34 @@ window.addEventListener('error', function (e) {
     ctx.restore();
   }
 
+  function drawFish(x, y, u, flap) { // Atlantis: a tropical fish
+    var wag = flap * 0.35 * u;
+    ctx.save(); ctx.translate(x, y);
+    ctx.fillStyle = '#ee7d1e'; ctx.beginPath(); ctx.moveTo(-0.9 * u, 0); ctx.lineTo(-1.75 * u, -0.65 * u + wag); ctx.lineTo(-1.75 * u, 0.65 * u + wag); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ff9f43'; ctx.beginPath(); ctx.ellipse(0, 0, 1.15 * u, 0.65 * u, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffe3c2'; ctx.beginPath(); ctx.ellipse(-0.1 * u, 0, 0.22 * u, 0.62 * u, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ee7d1e'; ctx.beginPath(); ctx.moveTo(-0.3 * u, -0.6 * u); ctx.lineTo(0.2 * u, -1.0 * u); ctx.lineTo(0.5 * u, -0.55 * u); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0.68 * u, -0.15 * u, 0.2 * u, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0.74 * u, -0.15 * u, 0.1 * u, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawBat(x, y, u, flap) { // Inferno: a flapping bat
+    var w = flap * 0.8;
+    ctx.save(); ctx.translate(x, y);
+    ctx.fillStyle = '#2b1330';
+    [-1, 1].forEach(function (sg) {
+      ctx.beginPath(); ctx.moveTo(sg * 0.2 * u, 0);
+      ctx.quadraticCurveTo(sg * 1.0 * u, (-0.9 - w) * u, sg * 1.95 * u, (-0.1 - w * 0.6) * u);
+      ctx.quadraticCurveTo(sg * 1.3 * u, 0.1 * u, sg * 1.0 * u, 0.55 * u);
+      ctx.quadraticCurveTo(sg * 0.6 * u, 0.2 * u, sg * 0.2 * u, 0.45 * u); ctx.closePath(); ctx.fill();
+    });
+    ctx.beginPath(); ctx.ellipse(0, 0.1 * u, 0.4 * u, 0.55 * u, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-0.3 * u, -0.35 * u); ctx.lineTo(-0.2 * u, -0.85 * u); ctx.lineTo(-0.02 * u, -0.45 * u); ctx.closePath(); ctx.moveTo(0.3 * u, -0.35 * u); ctx.lineTo(0.2 * u, -0.85 * u); ctx.lineTo(0.02 * u, -0.45 * u); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ff3b30'; ctx.beginPath(); ctx.arc(-0.14 * u, -0.1 * u, 0.07 * u, 0, Math.PI * 2); ctx.arc(0.14 * u, -0.1 * u, 0.07 * u, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
   function drawBlockBird(x, y, u, flap) { // blocky parrot
     var up = flap > 0;
     ctx.save(); ctx.translate(x, y);
@@ -1312,6 +1376,8 @@ window.addEventListener('error', function (e) {
 
   function drawBigBird(x, y, u, flap) {
     if (W.id === 'blocks') { drawBlockBird(x, y, u, flap); return; }
+    if (W.flyer === 'fish') { drawFish(x, y, u, flap); return; }
+    if (W.flyer === 'bat') { drawBat(x, y, u, flap); return; }
     if (W.id === 'neotokyo') { drawDrone(x, y, u, flap); return; }
     var w = flap * 0.9; // -0.9 .. 0.9: wings down .. up
     ctx.save(); ctx.translate(x, y); ctx.lineJoin = 'round';
@@ -1361,6 +1427,24 @@ window.addEventListener('error', function (e) {
         ctx.beginPath(); ctx.moveTo(sx - wd, y1); ctx.lineTo(sx + wd, y1); ctx.lineTo(sx, y1 - ph * 0.42); ctx.closePath(); ctx.fill();
         ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(sx - wd * 0.4, y1 - ph * 0.26); ctx.lineTo(sx + wd * 0.4, y1 - ph * 0.26); ctx.lineTo(sx, y1 - ph * 0.42); ctx.closePath(); ctx.fill();
       }
+    } else if (kind === 'candycane') { // striped candy cane with a hook
+      var cw2 = Math.max(2, pw * 0.2);
+      for (var cs = 0; cs < 8; cs++) { ctx.fillStyle = cs % 2 ? '#ffffff' : '#ff3b57'; ctx.fillRect(sx - cw2 / 2, sy - ph * (cs + 1) / 8, cw2, ph / 8 + 1); }
+      ctx.lineWidth = cw2; ctx.strokeStyle = '#ff3b57'; ctx.beginPath(); ctx.arc(sx + cw2 * 1.5, sy - ph, cw2 * 1.5, Math.PI, 0); ctx.stroke();
+      ctx.strokeStyle = '#ffffff'; ctx.setLineDash([cw2 * 0.9, cw2 * 0.9]); ctx.beginPath(); ctx.arc(sx + cw2 * 1.5, sy - ph, cw2 * 1.5, Math.PI, 0); ctx.stroke(); ctx.setLineDash([]);
+    } else if (kind === 'coral') { // branching coral
+      ctx.lineCap = 'round'; ctx.lineWidth = Math.max(2, pw * 0.17);
+      [[0, 0.95, '#ff6b81'], [-0.5, 0.7, '#ff9f43'], [0.5, 0.78, '#ff6b81'], [-0.2, 0.5, '#ff9f43'], [0.22, 0.55, '#ffb3c1']].forEach(function (cb) {
+        ctx.strokeStyle = cb[2]; ctx.fillStyle = cb[2];
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(sx + cb[0] * pw * 0.2, sy - ph * cb[1] * 0.5, sx + cb[0] * pw * 0.6, sy - ph * cb[1]); ctx.stroke();
+        ctx.beginPath(); ctx.arc(sx + cb[0] * pw * 0.6, sy - ph * cb[1], Math.max(2, pw * 0.14), 0, Math.PI * 2); ctx.fill();
+      });
+    } else if (kind === 'spike') { // obsidian spikes with glowing tips
+      [[-0.35, 0.7], [0, 1], [0.38, 0.55]].forEach(function (sp) {
+        var bx2 = sx + sp[0] * pw, hh = ph * sp[1], ww = pw * 0.28;
+        ctx.fillStyle = '#2b0f14'; ctx.beginPath(); ctx.moveTo(bx2 - ww, sy); ctx.lineTo(bx2, sy - hh); ctx.lineTo(bx2 + ww, sy); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#ff5a1a'; ctx.beginPath(); ctx.moveTo(bx2 - ww * 0.35, sy - hh * 0.72); ctx.lineTo(bx2, sy - hh); ctx.lineTo(bx2 + ww * 0.35, sy - hh * 0.72); ctx.closePath(); ctx.fill();
+      });
     } else if (kind === 'blocktree') { // square oak: trunk column + a block of leaves
       var tr2 = Math.max(2, pw * 0.3);
       ctx.fillStyle = '#6b4a2b'; ctx.fillRect(sx - tr2 / 2, sy - ph * 0.58, tr2, ph * 0.58);
@@ -1414,6 +1498,21 @@ window.addEventListener('error', function (e) {
       ctx.strokeStyle = '#eef3f6'; ctx.lineWidth = Math.max(1.5, 0.12 * s); ctx.stroke();
       ctx.fillStyle = '#7e8a95'; ctx.fillRect(sx - 0.6 * s, sy - h * 0.45, 1.2 * s, h * 0.45);
       ctx.fillStyle = '#e8453c'; ctx.fillRect(sx + w * 0.3, sy - h * 0.45 - 1.4 * s, 0.14 * s, 1.4 * s);
+      return;
+    }
+    if (kind === 'gingerbread') { // gingerbread cottage with icing
+      ctx.fillStyle = '#b9723d'; ctx.fillRect(sx - w / 2, sy - h, w, h);
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(sx - w / 2 - 0.5 * s, sy - h); ctx.lineTo(sx, sy - h - 2.8 * s); ctx.lineTo(sx + w / 2 + 0.5 * s, sy - h); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#ff5d8f'; for (var gd = 0; gd < 4; gd++) { ctx.beginPath(); ctx.arc(sx - w * 0.36 + gd * w * 0.24, sy - h + 0.1 * s, 0.35 * s, 0, Math.PI * 2); ctx.fill(); }
+      ctx.fillStyle = '#6b3a1d'; ctx.fillRect(sx - 0.7 * s, sy - 2.2 * s, 1.4 * s, 2.2 * s);
+      ctx.fillStyle = '#ffe066'; ctx.fillRect(sx - w / 2 + 0.7 * s, sy - h * 0.7, 1.3 * s, 1.3 * s); ctx.fillRect(sx + w / 2 - 2.0 * s, sy - h * 0.7, 1.3 * s, 1.3 * s);
+      return;
+    }
+    if (kind === 'temple') { // Atlantis temple with columns
+      ctx.fillStyle = '#d9d3b5'; ctx.fillRect(sx - w / 2 - 0.3 * s, sy - 0.5 * s, w + 0.6 * s, 0.5 * s);
+      ctx.fillStyle = 'rgba(64,224,208,0.3)'; ctx.fillRect(sx - w * 0.32, sy - h * 0.95, w * 0.64, h * 0.9);
+      ctx.fillStyle = '#e8e2c8'; for (var tc = 0; tc < 4; tc++) ctx.fillRect(sx - w / 2 + 0.4 * s + tc * (w - 1.5 * s) / 3, sy - h * 1.05, 0.7 * s, h * 1.05 - 0.5 * s);
+      ctx.beginPath(); ctx.moveTo(sx - w / 2 - 0.4 * s, sy - h * 1.05); ctx.lineTo(sx, sy - h * 1.05 - 2.0 * s); ctx.lineTo(sx + w / 2 + 0.4 * s, sy - h * 1.05); ctx.closePath(); ctx.fill();
       return;
     }
     if (kind === 'cube') { // block-style wooden house with a stone base
@@ -1576,7 +1675,7 @@ window.addEventListener('error', function (e) {
       eg.addColorStop(0, '#6fc3ff'); eg.addColorStop(1, '#1b5fb4');
       ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(ex, ey, er, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = 'rgba(60,170,90,0.85)'; ctx.beginPath(); ctx.ellipse(ex - er * 0.25, ey - er * 0.1, er * 0.35, er * 0.25, 0.5, 0, Math.PI * 2); ctx.ellipse(ex + er * 0.35, ey + er * 0.3, er * 0.25, er * 0.18, -0.3, 0, Math.PI * 2); ctx.fill();
-    } else if (sunA > 0.02) {
+    } else if (sunA > 0.02 && !W.noSun) {
       var sxn = VW * 0.86, syn = VH * 0.17, sr = Math.min(VW, VH) * 0.06;
       var sg = ctx.createRadialGradient(sxn, syn, sr * 0.3, sxn, syn, sr * 3);
       sg.addColorStop(0, (W.sunGlow || 'rgba(255,240,150,') + (0.9 * sunA) + ')'); sg.addColorStop(1, (W.sunGlow || 'rgba(255,240,150,') + '0)');
@@ -1598,7 +1697,7 @@ window.addEventListener('error', function (e) {
       ctx.restore(); ctx.globalAlpha = 1;
     }
     if (a < 0.95 && !W.noClouds) {
-      ctx.fillStyle = 'rgba(255,255,255,' + (0.85 * (1 - a)) + ')';
+      ctx.fillStyle = (W.cloudCol || 'rgba(255,255,255,') + (0.85 * (1 - a)) + ')';
       for (i = 0; i < 8; i++) {
         var span = VW * 1.7;
         var cx = (((i * 0.37 * span - bgX * BG_PX * 0.12 + clock * 6) % span) + span) % span - VW * 0.3;
@@ -1612,6 +1711,25 @@ window.addEventListener('error', function (e) {
         var bxp = (((i * 97 + clock * 22) % (VW + 100)) + VW + 100) % (VW + 100) - 50;
         drawBird(bxp, VH * (0.22 + 0.04 * (i % 3)) + Math.sin(clock * 2 + i) * 4, 6, Math.sin(clock * 9 + i * 1.7) * fa, 'rgba(60,70,80,' + (0.7 * fa) + ')');
       }
+    }
+
+    var bfade = 1 - clamp(cam.alt / 120, 0, 1);
+    if (bfade > 0.02 && (W.rays || W.bubbles || W.embers)) {
+      ctx.globalAlpha = bfade;
+      if (W.rays) { // Atlantis: sunlight beams from the surface
+        ctx.fillStyle = 'rgba(200,255,255,0.07)';
+        for (i = 0; i < 5; i++) { var rx = (i * 0.24 + Math.sin(clock * 0.2 + i) * 0.03) * VW; ctx.beginPath(); ctx.moveTo(rx, 0); ctx.lineTo(rx + 70, 0); ctx.lineTo(rx + 190, VH); ctx.lineTo(rx + 60, VH); ctx.closePath(); ctx.fill(); }
+      }
+      if (W.bubbles || W.embers) {
+        for (i = 0; i < 26; i++) {
+          var pspd = 14 + hash(i, 3, 61) * 26;
+          var pbx = (((hash(i, 1, 61) * VW + Math.sin(clock * 0.6 + i) * 14 - bgX * 0.3) % VW) + VW) % VW;
+          var pby = VH - ((clock * pspd + hash(i, 2, 61) * VH) % VH), pbr = 1.5 + hash(i, 4, 61) * 3.5;
+          if (W.bubbles) { ctx.strokeStyle = 'rgba(220,250,255,0.5)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(pbx, pby, pbr * 1.4, 0, Math.PI * 2); ctx.stroke(); }
+          else { ctx.fillStyle = hash(i, 5, 61) < 0.5 ? 'rgba(255,170,50,0.85)' : 'rgba(255,90,30,0.8)'; ctx.fillRect(pbx, pby, pbr, pbr); }
+        }
+      }
+      ctx.globalAlpha = 1;
     }
 
     // --- parallax hills with trees and houses (fade out as we climb) ---
@@ -1643,7 +1761,7 @@ window.addEventListener('error', function (e) {
           if (layer === 1 && W.house && h1 > 0.78) { drawHouse(W.house, ((ti % 3) + 3) % 3, tp, ys[idx] + 2, 3.2 * VH / 600); continue; }
           if (h1 < 0.6 && !W.noHillTrees) {
             var tr = (7 + h1 * 7) * (VH / 700);
-            ctx.fillStyle = layer === 0 ? 'rgba(40,120,80,0.55)' : 'rgba(25,100,60,0.75)';
+            ctx.fillStyle = W.hillTreeCol ? W.hillTreeCol[layer === 0 ? 0 : 1] : (layer === 0 ? 'rgba(40,120,80,0.55)' : 'rgba(25,100,60,0.75)');
             ctx.fillRect(tp - 1.5, ys[idx] - tr * 0.4, 3, tr * 0.5);
             if (W.pixel) ctx.fillRect(tp - tr * 0.6, ys[idx] - tr * 1.6, tr * 1.2, tr * 1.2);
             else { ctx.beginPath(); ctx.arc(tp, ys[idx] - tr, tr * 0.7, 0, Math.PI * 2); ctx.fill(); }
@@ -1764,7 +1882,7 @@ window.addEventListener('error', function (e) {
       for (i = 0; i < fs.length; i++) {
         f = fs[i];
         if (f.type === 'tree') { if (!ball.destroyed[f.id]) drawTree(W.tree, sx(f.x), syw(gyOf(W, f), f.x), f.w, f.h, ppm); }
-        else if (f.type === 'pole') {
+        else if (f.type === 'pole' && !ball.destroyed[f.id]) {
           ctx.strokeStyle = '#dfe6ea'; ctx.lineWidth = Math.max(2, f.w * ppm);
           var pgy = gyOf(W, f); ctx.beginPath(); ctx.moveTo(sx(f.x), syw(pgy, f.x)); ctx.lineTo(sx(f.x), syw(pgy + f.h, f.x)); ctx.stroke();
           ctx.fillStyle = '#e8453c'; ctx.fillRect(sx(f.x), syw(pgy + f.h, f.x), 1.2 * ppm, 0.8 * ppm);
@@ -2017,7 +2135,7 @@ window.addEventListener('error', function (e) {
   // other planets are single worlds. Locked worlds are grey. Clicking the Sun shows portals to
   // worlds that don't exist yet. Tapping a world selects it; the card under the map starts it.
   var mapSel = null; // world index, or -1 for the Sun
-  var WORLD_ICONS = ['🌳', '🏜️', '❄️', '🌕', '🔴', '☿️', '🌋', '🟠', '🪐', '🧊', '🔵', '🌃', '🧱'];
+  var WORLD_ICONS = ['🌳', '🏜️', '❄️', '🌕', '🔴', '☿️', '🌋', '🟠', '🪐', '🧊', '🔵', '🌃', '🧱', '🍭', '🐠', '😈'];
   var SVGNS = 'http://www.w3.org/2000/svg';
   function sv(tag, attrs, parent) {
     var n = document.createElementNS(SVGNS, tag);
@@ -2102,11 +2220,11 @@ window.addEventListener('error', function (e) {
       box.appendChild(el('div', 'ico', '☀️'));
       var inf = el('div', 'info');
       inf.appendChild(el('b', '', 'Słońce — portale'));
-      inf.appendChild(el('span', '', 'Portale prowadzą do kolejnych światów: Neo-Tokio i Blokowy Świat otwierają się po orbicie na Neptunie. Kolejne już wkrótce!'));
+      inf.appendChild(el('span', '', 'Portale prowadzą do kolejnych światów. Neo-Tokio i Blokowy Świat otwierają się po orbicie na Neptunie, a Cukrowa Kraina, Atlantyda i Wulkaniczne Piekło (20 000 000 m!) po orbicie w Neo-Tokio. Kolejne już wkrótce!'));
       var pr = el('div', 'portals');
       var portalWorlds = [];
       for (var wi2 = 0; wi2 < WORLDS.length; wi2++) if (WORLDS[wi2].portal) portalWorlds.push(wi2);
-      for (var q = 0; q < 3; q++) {
+      for (var q = 0; q < portalWorlds.length + 1; q++) {
         var pc = el('div', 'portal'), pidx = portalWorlds[q];
         pc.appendChild(el('span', 'swirl', '🌀'));
         if (pidx !== undefined) {
@@ -2264,6 +2382,13 @@ window.addEventListener('error', function (e) {
   });
   $('btn-gear').addEventListener('click', function () { writeSave(); sendStats(); refreshMenu(); showScreen('menu'); });
   $('b-club').addEventListener('click', function () { openShop('skin'); });
+  $('b-quick').classList.toggle('is-on', quickShots);
+  $('b-quick').addEventListener('click', function () {
+    quickShots = !quickShots;
+    try { localStorage.setItem('mg_orbgolf_quick', quickShots ? '1' : '0'); } catch (eQ2) { /* ignore */ }
+    $('b-quick').classList.toggle('is-on', quickShots);
+    banner(quickShots ? '⚡ Szybkie strzały: włączone' : 'Szybkie strzały: wyłączone');
+  });
   $('b-star').addEventListener('click', function () { openShop('world'); });
   $('shop-close').addEventListener('click', function () { $('shop').classList.remove('is-open'); updateHud(); });
   $('b-gift').addEventListener('click', openWheel);
@@ -2448,7 +2573,7 @@ window.addEventListener('error', function (e) {
       'prędkość: ' + f1(spd) + ' m/s (vx ' + f1(ball.vx) + ', vy ' + f1(ball.vy) + ')',
       'v0: ' + f1(st.v0) + '  opór: ' + st.drag.toFixed(3) + '  tarcie x' + st.muScale.toFixed(2) + '  odb. x' + st.bounce.toFixed(2),
       'ogień: ' + (ball.fire ? 'TAK' : 'nie') + '  drzewa: ' + ball.trees + '  ptaki: ' + ball.birds + '  zdarzenie: ' + (shotEvent || '-'),
-      'czas lotu: ' + f1(ball.t) + ' s  skala czasu: x' + timeScale.toFixed(2),
+      'czas lotu: ' + f1(ball.t) + ' s  skala czasu: x' + timeScale.toFixed(2) + '  szybkie: ' + (quickShots ? 'TAK' : 'nie'),
       'kamera: ppm ' + f1(cam.ppm) + '  x ' + f1(cam.x) + '  wys ' + f1(cam.alt),
       'ulepszenia: siła ' + save.up.str + ' / szyb. ' + save.up.spd + ' / odb. ' + save.up.bnc,
       'cząsteczki: ' + particles.length + '  ekran: ' + VW + 'x' + VH + ' @' + dpr
