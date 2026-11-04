@@ -288,7 +288,7 @@ window.addEventListener('error', function (e) {
 <script>
 (function () {
   var DT = 1 / 120, MAXLV = 200, CHUNK = 60, BALL_R = 0.3;
-  var VERSION = '3.5', BUILD = '2026-11-04';
+  var VERSION = '3.6', BUILD = '2026-11-04';
   var GREEN_R = 24; // lighter putting green around each hole (flat; finish with a chip)
   var CURV_R = 900; // virtual planet radius (m) for the horizon curvature at altitude
 
@@ -653,6 +653,14 @@ window.addEventListener('error', function (e) {
     { id: 'speed', name: 'Szybka', color: '#3498db', price: 25, power: 1, earn: 1, spd: 12, bnc: 0, desc: 'Mniejszy opór (+12 poz. Szybkości).' },
     { id: 'bounce', name: 'Skoczna', color: '#2ecc71', price: 25, power: 1, earn: 1, spd: 0, bnc: 12, desc: 'Wyższe odbicia (+12 poz. Odbicia).' },
     { id: 'extra', name: 'Ekstra', color: '#9b59b6', price: 60, power: 1.4, earn: 2, spd: 0, bnc: 0, desc: 'Siła ×1,4 i zarobki ×2.' },
+    // special balls: luck = how much more often the random shot events happen, burn = always on fire
+    { id: 'lucky', name: 'Szczęśliwa', color: '#1abc9c', price: 40, power: 1, earn: 1.5, spd: 0, bnc: 0, luck: 3, desc: 'Zdarzenia losowe 3× częściej (do 9% na strzał), zarobki ×1,5.' },
+    { id: 'ice', name: 'Lodowa', color: '#8fe3ff', price: 55, power: 1.1, earn: 1, spd: 20, bnc: 0, desc: 'Prawie bez oporu (+20 poz. Szybkości), siła ×1,1.' },
+    { id: 'fire', name: 'Ognista', color: '#ff6a00', price: 70, power: 1.3, earn: 1, spd: 0, bnc: 0, burn: true, desc: 'Zawsze płonie: niszczy drzewa, siła ×1,3.' },
+    { id: 'neon', name: 'Neonowa', color: '#ff2d95', glow: 'rgba(255,45,149,', price: 120, power: 1.5, earn: 2, spd: 8, bnc: 8, desc: 'Siła ×1,5, zarobki ×2, +8 Szybkości i Odbicia.' },
+    { id: 'rainbow', name: 'Tęczowa', color: '#ffd60a', swatch: 'linear-gradient(135deg,#ff3b30,#ffd60a,#34c759,#0a84ff,#bf5af2)', rainbow: true, price: 220, power: 1.7, earn: 4, spd: 10, bnc: 10, luck: 2, desc: 'Siła ×1,7, zarobki ×4, zdarzenia 2× częściej.' },
+    { id: 'cosmic', name: 'Kosmiczna', color: '#2c3e6b', glow: 'rgba(120,150,255,', price: 380, power: 2, earn: 3, spd: 20, bnc: 12, desc: 'Siła ×2, zarobki ×3, +20 Szybkości, +12 Odbicia.' },
+    { id: 'diamond', name: 'Diamentowa', color: '#c9f6ff', glow: 'rgba(180,240,255,', price: 650, power: 1.9, earn: 8, spd: 25, bnc: 20, luck: 3, desc: 'Zarobki ×8, siła ×1,9, +25 Szybkości, +20 Odbicia, zdarzenia 3× częściej.' },
   ];
   var SKINS = [
     { name: 'Klasyk', cap: '#e74c3c', shirt: '#f08a3c', price: 0 },
@@ -929,12 +937,12 @@ window.addEventListener('error', function (e) {
 
   function doLaunch() {
     P = statsFor(W, save.up, curBall());
-    var evMult = 1, roll = Math.random(), evText = '';
+    var cb = curBall(), lk = 0.01 * (cb.luck || 1), evMult = 1, roll = Math.random(), evText = '';
     shotEvent = null;
-    if (roll < 0.01) { shotEvent = 'super'; evMult = luckyMult(W, P, swingTheta, lastZone.mult); evText = '🍀 SZCZĘŚLIWY STRZAŁ! Leci ×3'; }
-    else if (roll < 0.02) { shotEvent = 'jackpot'; evText = '💰 ZŁOTY STRZAŁ! Monety ×5'; }
-    else if (roll < 0.03) { shotEvent = 'gems'; evText = '💎 DIAMENTOWY STRZAŁ! +3 💎'; }
-    launchBall(ball, P, swingTheta, lastZone.mult * evMult, swingPerfect);
+    if (roll < lk) { shotEvent = 'super'; evMult = luckyMult(W, P, swingTheta, lastZone.mult); evText = '🍀 SZCZĘŚLIWY STRZAŁ! Leci ×3'; }
+    else if (roll < 2 * lk) { shotEvent = 'jackpot'; evText = '💰 ZŁOTY STRZAŁ! Monety ×5'; }
+    else if (roll < 3 * lk) { shotEvent = 'gems'; evText = '💎 DIAMENTOWY STRZAŁ! +3 💎'; }
+    launchBall(ball, P, swingTheta, lastZone.mult * evMult, swingPerfect || !!cb.burn);
     state = 'flight';
     acc = 0; trail = []; timeScale = 1;
     banner(evText || lastZone.name);
@@ -1046,9 +1054,9 @@ window.addEventListener('error', function (e) {
     lines.push('Dystans: <b>' + fmt(dist) + ' m</b>' + (res === 'water' ? ' · wpadła do wody 💦' : ''));
     if (shotEvent === 'jackpot') coins *= 5;
     lines.push('Monety: <b>+' + fmt(coins) + ' 🪙</b>' + (lastZone.coin > 1.2 ? ' (idealny kąt ×1,3)' : ''));
-    if (shotEvent === 'super') lines.push('🍀 <b>Szczęśliwy strzał!</b> Poleciało około ×3 dalej (szansa 1 na 100).');
-    else if (shotEvent === 'jackpot') lines.push('💰 <b>Złoty strzał!</b> Monety ×5 (szansa 1 na 100).');
-    else if (shotEvent === 'gems') { save.gems += 3; lines.push('💎 <b>Diamentowy strzał!</b> +3 💎 (szansa 1 na 100).'); }
+    if (shotEvent === 'super') lines.push('🍀 <b>Szczęśliwy strzał!</b> Poleciało około ×3 dalej (rzadkie zdarzenie!).');
+    else if (shotEvent === 'jackpot') lines.push('💰 <b>Złoty strzał!</b> Monety ×5 (rzadkie zdarzenie!).');
+    else if (shotEvent === 'gems') { save.gems += 3; lines.push('💎 <b>Diamentowy strzał!</b> +3 💎 (rzadkie zdarzenie!).'); }
 
     if (ball.birds > 0) {
       var bb = Math.round(40 * W.earn * ball.birds);
@@ -1819,7 +1827,14 @@ window.addEventListener('error', function (e) {
       ctx.fillStyle = fg; ctx.fillRect(bx - br * 3.4, by - br * 3.4, br * 6.8, br * 6.8);
     }
     ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(bx, syw(groundY(W, ball.x), ball.x) + 1, br, br * 0.3, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = curBall().color; ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2); ctx.fill();
+    var cbl = curBall();
+    if (cbl.glow && !ball.fire) { // special balls shine a little
+      var bg2 = ctx.createRadialGradient(bx, by, br * 0.4, bx, by, br * 2.6);
+      bg2.addColorStop(0, cbl.glow + '0.7)'); bg2.addColorStop(1, cbl.glow + '0)');
+      ctx.fillStyle = bg2; ctx.fillRect(bx - br * 2.6, by - br * 2.6, br * 5.2, br * 5.2);
+    }
+    ctx.fillStyle = cbl.rainbow ? 'hsl(' + Math.floor((clock * 120) % 360) + ',90%,58%)' : cbl.color;
+    ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1.5; ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.arc(bx - br * 0.3, by - br * 0.3, br * 0.28, 0, Math.PI * 2); ctx.fill();
     for (i = 0; i < particles.length; i++) {
@@ -1980,7 +1995,7 @@ window.addEventListener('error', function (e) {
         else btn = buyBtn('Kup 💎 ' + b.price, save.gems >= b.price, function () {
           save.gems -= b.price; save.balls.owned.push(b.id); save.balls.sel = b.id; writeSave(); updateHud(); renderShop();
         });
-        body.appendChild(rowFor('', b.name, b.desc, btn, sel, b.color));
+        body.appendChild(rowFor('', b.name, b.desc, btn, sel, b.swatch || b.color));
       });
       body.appendChild(el('div', 'info', 'Diamenty 💎 zdobywasz na kole szczęścia i za orbity.'));
     } else if (shopTab === 'skin') {
