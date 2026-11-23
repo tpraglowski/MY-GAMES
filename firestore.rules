@@ -99,5 +99,26 @@ service cloud.firestore {
       allow update: if isMe(resource.data.addedBy.lower()) || isAdmin();
       allow delete: if isMe(resource.data.addedBy.lower()) || isAdmin();
     }
+
+    // ===== MENTIX — publiczne zestawy pytań (strona tpraglowski.github.io/mentix) =====
+    // Każdy zalogowany (anonimowo) może czytać. Dodać zestaw może każdy, ale tylko jako swój
+    // (ownerUid = jego uid); zmienić / usunąć może wyłącznie autor.
+    match /mentix_sets/{setId} {
+      function validSet() {
+        return request.resource.data.keys().hasOnly(['title', 'desc', 'emoji', 'visibility', 'questions', 'author', 'ownerUid', 'updatedAt'])
+          && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 60
+          && request.resource.data.desc is string && request.resource.data.desc.size() <= 300
+          && request.resource.data.emoji is string && request.resource.data.emoji.size() <= 8
+          && request.resource.data.author is string && request.resource.data.author.size() <= 16
+          && request.resource.data.visibility == 'public'
+          && request.resource.data.questions is list && request.resource.data.questions.size() > 0 && request.resource.data.questions.size() <= 200
+          && request.resource.data.updatedAt is number
+          && request.resource.data.ownerUid == request.auth.uid;
+      }
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && validSet();
+      allow update: if request.auth != null && resource.data.ownerUid == request.auth.uid && validSet();
+      allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+    }
   }
 }
