@@ -100,9 +100,32 @@ service cloud.firestore {
       allow delete: if isMe(resource.data.addedBy.lower()) || isAdmin();
     }
 
-    // ===== MENTIX — publiczne zestawy pytań (strona tpraglowski.github.io/mentix) =====
-    // Każdy zalogowany (anonimowo) może czytać. Dodać zestaw może każdy, ale tylko jako swój
-    // (ownerUid = jego uid); zmienić / usunąć może wyłącznie autor.
+    // ===== MENTIX — konta, role i zestawy pytań (strona tpraglowski.github.io/mentix) =====
+    // Każdy odwiedzający jest zalogowany anonimowo; konto = Firebase Auth e-mail <login>@konta.mentix.app.
+    // Administrator: rola 'admin' w mentix_users ALBO główny admin tpraglowski (po e-mailu konta).
+    function mxIsAdmin() {
+      return request.auth != null && (
+        request.auth.token.get('email', '') == 'tpraglowski@konta.mentix.app'
+        || (exists(/databases/$(database)/documents/mentix_users/$(request.auth.uid))
+            && get(/databases/$(database)/documents/mentix_users/$(request.auth.uid)).data.role == 'admin'));
+    }
+
+    // Profile kont: każdy zalogowany może czytać; profil tworzy tylko właściciel (zawsze jako 'user'),
+    // rolę może zmienić wyłącznie administrator.
+    match /mentix_users/{uid} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['login', 'role', 'createdAt'])
+        && request.resource.data.role == 'user'
+        && request.resource.data.login is string
+        && request.resource.data.login + '@konta.mentix.app' == request.auth.token.get('email', '');
+      allow update: if mxIsAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role'])
+        && request.resource.data.role in ['user', 'admin'];
+      allow delete: if mxIsAdmin();
+    }
+
+    // Zestawy: publiczne widzi każdy, prywatne tylko autor (i admin). Zmienia tylko autor; usuwa autor albo admin.
     match /mentix_sets/{setId} {
       function validSet() {
         return request.resource.data.keys().hasOnly(['title', 'desc', 'emoji', 'visibility', 'questions', 'author', 'ownerUid', 'updatedAt'])
@@ -110,15 +133,16 @@ service cloud.firestore {
           && request.resource.data.desc is string && request.resource.data.desc.size() <= 300
           && request.resource.data.emoji is string && request.resource.data.emoji.size() <= 8
           && request.resource.data.author is string && request.resource.data.author.size() <= 16
-          && request.resource.data.visibility == 'public'
+          && request.resource.data.visibility in ['public', 'private']
           && request.resource.data.questions is list && request.resource.data.questions.size() > 0 && request.resource.data.questions.size() <= 200
           && request.resource.data.updatedAt is number
           && request.resource.data.ownerUid == request.auth.uid;
       }
-      allow read: if request.auth != null;
+      allow read: if request.auth != null
+        && (resource.data.visibility == 'public' || resource.data.ownerUid == request.auth.uid || mxIsAdmin());
       allow create: if request.auth != null && validSet();
       allow update: if request.auth != null && resource.data.ownerUid == request.auth.uid && validSet();
-      allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+      allow delete: if request.auth != null && (resource.data.ownerUid == request.auth.uid || mxIsAdmin());
     }
   }
 }
